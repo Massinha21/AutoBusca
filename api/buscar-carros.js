@@ -1,93 +1,128 @@
 // api/buscar-carros.js
 //
-// Serverless Function principal da Vercel.
-// Recebe uma requisição de busca e retorna carros encontrados nas revendas.
+// Endpoint principal — Serverless Function da Vercel
+// Recebe: POST { query: string }
+// Retorna: { query, total, sites, results }
 //
-// FASE 1: retorna dados fake para validar o visual e a estrutura do front-end.
-// FASE 2+: cada site terá um parser real em /api/parsers/<nome-do-site>.js
-//
-// Método aceito: POST
-// Body esperado (JSON):
-//   {
-//     "query": "HB20",
-//     "urls": ["https://site1.com", "https://site2.com"]  ← opcional na Fase 1
-//   }
-//
-// Resposta (JSON):
-//   {
-//     "query": "HB20",
-//     "total": 8,
-//     "sites": [
-//       { "name": "AMF Veículos", "status": "success", "count": 2 },
-//       { "name": "Site Falhou", "status": "error",   "count": 0, "error": "Timeout" }
-//     ],
-//     "results": [ { title, price, image_url, url, dealer_name }, ... ]
-//   }
+// Busca em TODOS os parsers cadastrados em paralelo (Promise.allSettled).
+// Se um site falhar, os outros continuam normalmente.
 
-const { FAKE_CARS } = require("./lib/fake-data");
 const { normalizePrice } = require("./lib/price-utils");
 
-// ─── Handler principal da Serverless Function ──────────────────────────────
+// ── Parsers reais (um arquivo por site de revenda) ────────────────────────
+const PARSERS = [
+  require("./parsers/amfveiculos"),
+  require("./parsers/savinhomotors"),
+  require("./parsers/ramiroveiculos"),
+  require("./parsers/glveiculos"),
+  require("./parsers/autoprimerp"),
+  require("./parsers/krveiculos"),
+  require("./parsers/baseveiculos"),
+  require("./parsers/mmveiculos"),
+  require("./parsers/valvechveiculos"),
+];
+
+// Headers para imitar um navegador e evitar bloqueios simples
+const BROWSER_HEADERS = {
+  "User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8",
+};
+
+const TIMEOUT_MS = 12000; // 12 segundos por site
+
+// ── Handler principal ─────────────────────────────────────────────────────
 module.exports = async function handler(req, res) {
-  // Permite chamadas do front-end (CORS) — necessário para testar localmente
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Origin",  "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // Resposta ao preflight do navegador (CORS OPTIONS)
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
+  if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST")    return res.status(405).json({ error: "Use POST." });
+
+  const { query } = req.body || {};
+  if (!query || !query.trim()) {
+    return res.status(400).json({ error: "Campo 'query' obrigatório." });
   }
 
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Método não permitido. Use POST." });
-  }
+  const term = query.trim();
 
-  // ── Lê e valida o corpo da requisição ──────────────────────────────────
-  let query, urls;
-  try {
-    ({ query, urls } = req.body);
-  } catch {
-    return res.status(400).json({ error: "Body JSON inválido." });
-  }
+  // Busca em todos os parsers em paralelo — falhas individuais não derrubam o resto
+  const settled = await Promise.allSettled(
+    PARSERS.map(parser =>
+      withTimeout(
+        parser.search(term, fetchHtml),
+        TIMEOUT_MS,
+        parser.name
+      )
+    )
+  );
 
-  if (!query || typeof query !== "string" || query.trim() === "") {
-    return res.status(400).json({ error: "O campo 'query' é obrigatório e não pode estar vazio." });
-  }
+  // Agrega resultados e estatísticas por loja
+  const allResults = [];
+  const sites      = [];
 
-  const searchTerm = query.trim().toLowerCase();
+  settled.forEach((outcome, i) => {
+    const parser = PARSERS[i];
 
-  // ── FASE 1: filtra os dados fake pelo termo de busca ───────────────────
-  // Na Fase 2+, este bloco será substituído por chamadas reais aos parsers.
-  const matchedCars = FAKE_CARS
-    .filter((car) => car.title.toLowerCase().includes(searchTerm))
-    .map((car) => {
-      // Normaliza o preço para garantir formato consistente
-      const { display, value } = normalizePrice(car.price);
-      return {
-        ...car,
-        price: display,
-        price_value: value, // valor numérico para ordenação no front-end
-      };
-    });
+    if (outcome.status === "fulfilled") {
+      const cars = (outcome.value || []).map(car => {
+        const { display, value } = normalizePrice(car.price);
+        return { ...car, price: display, price_value: value };
+      });
 
-  // ── Agrega estatísticas por loja (útil para o painel de progresso) ─────
-  const siteStats = {};
-  matchedCars.forEach((car) => {
-    if (!siteStats[car.dealer_name]) {
-      siteStats[car.dealer_name] = { name: car.dealer_name, status: "success", count: 0 };
+      sites.push({ name: parser.name, status: "success", count: cars.length });
+      allResults.push(...cars);
+    } else {
+      console.error(`[${parser.name}] Erro:`, outcome.reason?.message || outcome.reason);
+      sites.push({
+        name:   parser.name,
+        status: "error",
+        count:  0,
+        error:  String(outcome.reason?.message || "Falha desconhecida").slice(0, 120),
+      });
     }
-    siteStats[car.dealer_name].count++;
   });
 
-  // ── Resposta final ─────────────────────────────────────────────────────
   return res.status(200).json({
-    query: query.trim(),
-    total: matchedCars.length,
-    sites: Object.values(siteStats),
-    results: matchedCars,
-    // Flag para o front-end saber que ainda é dado de teste
-    _phase: 1,
-    _note: "Dados simulados. Fase 2 implementará scraping real por site.",
+    query: term,
+    total: allResults.length,
+    sites,
+    results: allResults,
   });
 };
+
+// ── Utilitários ───────────────────────────────────────────────────────────
+
+/**
+ * Faz um GET HTTP e retorna o corpo como texto.
+ * Usado pelos parsers para buscar o HTML dos sites.
+ */
+async function fetchHtml(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  try {
+    const res = await fetch(url, {
+      headers: BROWSER_HEADERS,
+      signal:  controller.signal,
+      redirect: "follow",
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status} em ${url}`);
+    return await res.text();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Envolve uma Promise com um timeout.
+ * Se demorar mais que maxMs, rejeita com erro de timeout.
+ */
+function withTimeout(promise, maxMs, label) {
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error(`Timeout (${maxMs}ms) em ${label}`)), maxMs)
+  );
+  return Promise.race([promise, timeout]);
+}

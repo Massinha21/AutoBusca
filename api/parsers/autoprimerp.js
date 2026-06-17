@@ -1,0 +1,47 @@
+// api/parsers/autoprimerp.js
+// Auto Prime RP — GET /estoque (lista completa, filtro local)
+// Plataforma Exibição — seletores: li.li-foto-estoque + li.li-desc-estoque
+
+const cheerio = require("cheerio");
+const NAME     = "Auto Prime RP";
+const BASE_URL = "https://autoprimerp.com.br";
+
+async function search(query, fetchHtml) {
+  const html = await fetchHtml(`${BASE_URL}/estoque`);
+  const $ = cheerio.load(html);
+  const queryWords = query.toLowerCase().split(/\s+/);
+  const results = [];
+
+  $("ul").each((_, ul) => {
+    try {
+      const el     = $(ul);
+      const fotoLi = el.find("li.li-foto-estoque");
+      const descLi = el.find("li.li-desc-estoque");
+      if (!fotoLi.length || !descLi.length) return;
+
+      let link = el.find("a[href]").first().attr("href") || null;
+      if (!link || !link.includes("exibicao")) return;
+      if (!link.startsWith("http")) link = `${BASE_URL}/${link.replace(/^\//, "")}`;
+
+      const titleSpan = descLi.find("span.tx-titulo-estoque");
+      let title = titleSpan.text().trim().replace(/\s+/g, " ") || "Veículo";
+      if (!queryWords.every(w => title.toLowerCase().includes(w))) return;
+
+      let image_url = null;
+      const style = fotoLi.attr("style") || "";
+      const bgm = style.match(/url\(['"]?(.*?)['"]?\)/);
+      if (bgm) {
+        image_url = bgm[1];
+        if (!image_url.startsWith("http")) image_url = `${BASE_URL}/${image_url.replace(/^\//, "")}`;
+      }
+
+      let price = descLi.find("span.tx-preco").text().trim() || "Sob consulta";
+      const clean = price.replace(/R\$|\s|\,00|\.00/g, "");
+      if (!clean || clean === "0") price = "Sob consulta";
+
+      results.push({ title, price, image_url, url: link, dealer_name: NAME });
+    } catch (_) {}
+  });
+  return results;
+}
+module.exports = { search, name: NAME };
