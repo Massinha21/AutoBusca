@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- SEO -->
+  <title>AutoBusca — Buscador Agregado de Veículos em Ribeirão Preto</title>
+  <meta name="description" content="Pesquise veículos seminovos em múltiplas revendas de Ribeirão Preto com um único clique. AutoBusca agrega resultados de AMF Veículos, Savinho Motors, Ramiro Veículos e mais.">
+  <meta name="robots" content="index, follow">
+
+  <!-- Fontes Google -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Favicon emoji -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+</head>
+
+<body class="dark-theme">
+
+  <div class="app-container">
+
+    <!-- ═══════ CABEÇALHO ═══════ -->
+    <header class="main-header">
+      <div class="logo-area">
+        <span class="logo-icon">🚗</span>
+        <h1>Auto<span>Busca</span></h1>
+      </div>
+
+      <div class="header-actions">
+        <button id="theme-toggle" class="theme-btn" title="Alternar tema claro/escuro" aria-label="Alternar tema">
+          <span class="icon-sun" aria-hidden="true">☀️</span>
+          <span class="icon-moon" aria-hidden="true">🌙</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ═══════ ÁREA DE BUSCA ═══════ -->
+    <main class="search-section" id="main-content">
+
+      <!-- Hero -->
+      <div class="search-hero">
+        <h2>Encontre o carro ideal em múltiplos estoques com um clique.</h2>
+        <p>Pesquise modelos, marcas ou anos em todas as revendas integradas de Ribeirão Preto.</p>
+      </div>
+
+      <!-- Formulário de Busca -->
+      <form id="search-form" class="search-form-wrapper" role="search" aria-label="Busca de veículos">
+        <div class="search-input-wrapper">
+          <span class="search-icon" aria-hidden="true">🔍</span>
+          <input
+            type="text"
+            id="search-input"
+            name="q"
+            placeholder="Digite o modelo (ex: Onix, Corolla 2022, HB20)..."
+            autocomplete="off"
+            aria-label="Termo de busca"
+            required
+          >
+          <button type="submit" id="search-btn" aria-label="Buscar veículos">
+            Buscar
+          </button>
+        </div>
+      </form>
+
+      <!-- ═══════ PAINEL DE URLs DAS REVENDAS ═══════ -->
+      <!-- O usuário pode colar as URLs dos sites que quer pesquisar.
+           As URLs são salvas no localStorage para não precisar redigitar. -->
+      <div class="urls-panel" id="urls-panel" aria-expanded="false">
+        <div class="urls-panel-header" id="urls-panel-toggle" role="button" tabindex="0" aria-controls="urls-panel-body">
+          <div class="urls-panel-title">
+            <span class="panel-icon" aria-hidden="true">🔗</span>
+            Revendas cadastradas
+            <span class="urls-panel-count" id="urls-count">0</span>
+          </div>
+          <span class="urls-panel-chevron" aria-hidden="true">▼</span>
+        </div>
+
+        <div class="urls-panel-body" id="urls-panel-body" role="region" aria-labelledby="urls-panel-toggle">
+          <label for="urls-textarea">
+            URLs dos sites de revenda
+            <span>Cole uma URL por linha. A busca será feita em todos os sites listados.</span>
+          </label>
+
+          <textarea
+            id="urls-textarea"
+            placeholder="https://amfveiculos.com.br&#10;https://savinhomotors.com.br&#10;https://www.ramiroveiculos.com&#10;..."
+            spellcheck="false"
+            aria-label="URLs das revendas, uma por linha"
+          ></textarea>
+
+          <div class="urls-panel-actions">
+            <button type="button" id="btn-save-urls" class="btn-save" aria-label="Salvar lista de URLs">
+              💾 Salvar
+            </button>
+            <button type="button" id="btn-clear-urls" class="btn-outline" aria-label="Limpar todas as URLs">
+              🗑️ Limpar
+            </button>
+            <button type="button" id="btn-load-defaults" class="btn-outline" aria-label="Carregar revendas padrão">
+              🏪 Carregar revendas padrão
+            </button>
+            <span class="urls-saved-notice" id="urls-saved-notice" aria-live="polite">✓ Salvo!</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════ PROGRESSO DE BUSCA ═══════ -->
+      <!-- Aparece enquanto a busca está em andamento, mostrando cada loja -->
+      <div class="progress-container hidden" id="progress-container" aria-live="polite" aria-label="Progresso da busca">
+        <div class="progress-header">
+          <span id="progress-status-text">Iniciando busca...</span>
+          <span id="progress-percentage">0%</span>
+        </div>
+        <div class="progress-bar-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+          <div class="progress-bar-fill" id="progress-bar-fill"></div>
+        </div>
+        <!-- Badges de cada loja são inseridos aqui pelo JS -->
+        <div class="store-status-list" id="store-status-list" aria-label="Status de cada loja"></div>
+      </div>
+
+      <!-- ═══════ CONTROLES DE RESULTADOS ═══════ -->
+      <!-- Aparece após a busca terminar, com contagem e ordenação -->
+      <div class="results-controls hidden" id="results-controls" aria-label="Controles de resultado">
+        <div class="results-summary">
+          Encontramos <strong id="total-results-count">0</strong> veículos correspondentes.
+        </div>
+        <div class="controls-right">
+          <div class="sort-wrapper">
+            <label for="sort-select">Ordenar por:</label>
+            <select id="sort-select" aria-label="Critério de ordenação">
+              <option value="default">Relevância</option>
+              <option value="price-asc">Preço: Menor → Maior</option>
+              <option value="price-desc">Preço: Maior → Menor</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════ GRID DE RESULTADOS ═══════ -->
+      <!-- Cards dos carros encontrados são inseridos aqui pelo JS -->
+      <div class="results-grid" id="results-grid" aria-label="Resultados da busca" aria-live="polite">
+        <!-- Estado inicial (antes de qualquer busca) -->
+        <div class="empty-state" id="initial-state">
+          <div class="empty-icon" aria-hidden="true">🚗</div>
+          <h3>Seu buscador está pronto</h3>
+          <p>Digite um termo acima e clique em Buscar para pesquisar em todas as revendas cadastradas simultaneamente.</p>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- ═══════ RODAPÉ ═══════ -->
+    <footer class="main-footer">
+      <p>© 2026 AutoBusca — Buscador agregado de veículos em Ribeirão Preto.</p>
+      <p>Respeitamos os termos de uso e o robots.txt de cada plataforma parceira.</p>
+    </footer>
+
+  </div><!-- /app-container -->
+
+  <!-- Scripts (módulos ES6, carregados no final do body) -->
+  <!-- storage.js: salva/lê URLs do localStorage -->
+  <script src="js/storage.js"></script>
+  <!-- ui.js: funções de renderização (cards, badges, skeleton) -->
+  <script src="js/ui.js"></script>
+  <!-- api.js: chamadas fetch à serverless function -->
+  <script src="js/api.js"></script>
+  <!-- app.js: lógica principal, orquestra tudo -->
+  <script src="js/app.js"></script>
+
+</body>
+</html>

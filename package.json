@@ -1,0 +1,15 @@
+{
+  "name": "autobusca",
+  "version": "1.0.0",
+  "description": "Marketplace agregador de busca de veículos em múltiplas revendas",
+  "private": true,
+  "engines": {
+    "node": ">=18.x"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0"
+  },
+  "scripts": {
+    "dev": "vercel dev"
+  }
+}

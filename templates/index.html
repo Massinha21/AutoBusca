@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoBusca - Buscador Agregado de Veículos</title>
+    
+    <!-- Google Fonts: Plus Jakarta Sans & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- CSS Estilos -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- Favicon Alternativo -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+</head>
+<body class="dark-theme">
+    <div class="background-glow"></div>
+    
+    <div class="app-container">
+        <!-- Cabeçalho -->
+        <header class="main-header">
+            <div class="logo-area">
+                <span class="logo-icon">✨</span>
+                <h1>Auto<span>Busca</span></h1>
+            </div>
+            
+            <div class="header-actions">
+                <button id="theme-toggle" class="theme-btn" title="Alternar Tema">
+                    <span class="icon-sun">☀️</span>
+                    <span class="icon-moon">🌙</span>
+                </button>
+            </div>
+        </header>
+        
+        <!-- Área Principal de Busca -->
+        <main class="search-section">
+            <div class="search-hero">
+                <h2>Encontre o carro ideal em múltiplos estoques com um clique.</h2>
+                <p>Pesquise modelos, marcas ou anos em todas as revendas integradas de Ribeirão Preto.</p>
+            </div>
+            
+            <form id="search-form" class="search-bar-container">
+                <div class="search-input-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="search-input" placeholder="Digite o modelo (ex: Onix, Corolla 2020, HB20)..." autocomplete="off" required>
+                    <button type="submit" id="search-btn">Buscar</button>
+                </div>
+            </form>
+            
+            <!-- Barra de Progresso de Scraping -->
+            <div id="progress-container" class="progress-container hidden">
+                <div class="progress-header">
+                    <span id="progress-status-text">Iniciando busca nos estoques...</span>
+                    <span id="progress-percentage">0/3 Lojas</span>
+                </div>
+                <div class="progress-bar-wrapper">
+                    <div id="progress-bar-fill" class="progress-bar-fill"></div>
+                </div>
+                <!-- Status Detalhado por Loja -->
+                <div id="store-status-list" class="store-status-list">
+                    <!-- Gerado dinamicamente pelo JS -->
+                </div>
+            </div>
+            
+            <!-- Controles de Resultados (Ordenação/Filtros) -->
+            <div id="results-controls" class="results-controls hidden">
+                <div class="results-summary">
+                    Encontramos <span id="total-results-count">0</span> veículos correspondentes.
+                </div>
+                <div class="controls-actions">
+                    <div class="sort-wrapper">
+                        <label for="sort-select">Ordenar por:</label>
+                        <select id="sort-select">
+                            <option value="default">Relevância</option>
+                            <option value="price-asc">Preço: Menor para Maior</option>
+                            <option value="price-desc">Preço: Maior para Menor</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Lista de Resultados -->
+            <div id="results-grid" class="results-grid">
+                <!-- Cards de carros serão renderizados aqui -->
+                <div class="empty-state">
+                    <div class="empty-icon">🚗</div>
+                    <h3>Seu buscador está pronto</h3>
+                    <p>Digite um termo acima para iniciar a busca agregada nos estoques de AMF Veículos, Ramiro Veículos e Savinho Motors.</p>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Rodapé -->
+        <footer class="main-footer">
+            <p>&copy; 2026 AutoBusca. Sistema de busca local para revendas parceiras.</p>
+            <p class="disclaimer">Respeitamos os termos de uso (robots.txt) de cada plataforma parceira.</p>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
