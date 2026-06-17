@@ -54,9 +54,18 @@ class AMFVeiculosParser(BaseParser):
                 # Se não encontrar os termos estruturados, tenta buscar um título de cabeçalho
                 if not title_parts:
                     h_tag = item.find(["h2", "h3", "h4", "h5"])
-                    title = h_tag.get_text(strip=True) if h_tag else "Veículo"
+                    title = h_tag.get_text(strip=True) if h_tag else ""
                 else:
                     title = " ".join(title_parts)
+
+                # Filtro de segurança: se o título for vazio ou o genérico "veículo"
+                if not title or title.lower() == "veículo":
+                    continue
+
+                # Filtro local do termo de busca
+                query_words = query.lower().split()
+                if not all(word in title.lower() for word in query_words):
+                    continue
 
                 # 4. Preço
                 # O preço geralmente está em um campo dinâmico contendo "R$"
