@@ -20,6 +20,12 @@ const PARSERS = [
   require("./parsers/baseveiculos"),
   require("./parsers/mmveiculos"),
   require("./parsers/valvechveiculos"),
+  require("./parsers/copaveiculos"),
+  require("./parsers/automaisveiculos"),
+  require("./parsers/rossiveiculos"),
+  require("./parsers/seminovosribeirao"),
+  require("./parsers/tcamotors"),
+  require("./parsers/holfautos"),
 ];
 
 // Headers para imitar um navegador e evitar bloqueios simples
