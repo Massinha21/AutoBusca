@@ -14,6 +14,7 @@ async function search(query, fetchHtml) {
   const url = `${BASE_URL}/?s=${encodeURIComponent(query)}`;
   const html = await fetchHtml(url);
   const $    = cheerio.load(html);
+  const queryWords = query.toLowerCase().split(/\s+/);
   const results = [];
 
   $(".jet-listing-grid__item").each((_, item) => {
@@ -35,7 +36,13 @@ async function search(query, fetchHtml) {
         .map((_, t) => $(t).text().trim()).get().filter(Boolean);
       let title = terms.length
         ? terms.join(" ")
-        : el.find("h2,h3,h4,h5").first().text().trim() || "Veículo";
+        : el.find("h2,h3,h4,h5").first().text().trim() || "";
+
+      // Filtro de segurança: se não achou título real ou se for genérico "veículo"
+      if (!title || title.toLowerCase() === "veículo") return;
+
+      // Filtro local do termo de busca
+      if (!queryWords.every(w => title.toLowerCase().includes(w))) return;
 
       // Preço
       let price = "Sob consulta";
