@@ -176,6 +176,29 @@ input, textarea, select { font-family: var(--font-body); }
 .light-theme .theme-btn .icon-sun  { display: block; }
 .light-theme .theme-btn .icon-moon { display: none; }
 
+/* Botão de navegação para FIPE */
+.nav-fipe-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: var(--font-heading);
+  color: var(--accent);
+  background: rgba(99, 102, 241, 0.08);
+  border: 1.5px solid rgba(99, 102, 241, 0.25);
+  padding: 0.45rem 1rem;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+.nav-fipe-btn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
 /* Footer */
 .main-footer {
   margin-top: auto;

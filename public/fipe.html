@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Tabela FIPE — AutoBusca</title>
+  <meta name="description" content="Consulte o preço FIPE de qualquer carro, moto ou caminhão de forma rápida e gratuita. Selecione marca, modelo e ano.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="fipe.css">
+
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+</head>
+
+<body class="dark-theme">
+
+  <div class="app-container">
+
+    <!-- ═══════ CABEÇALHO ═══════ -->
+    <header class="main-header">
+      <div class="logo-area">
+        <a href="index.html" style="display:flex;align-items:center;gap:0.65rem;text-decoration:none;color:inherit;">
+          <span class="logo-icon">🚗</span>
+          <h1>Auto<span>Busca</span></h1>
+        </a>
+      </div>
+      <div class="header-actions">
+        <a href="index.html" class="nav-link-btn" aria-label="Ir para o buscador de veículos">
+          🔍 Buscador
+        </a>
+        <button id="theme-toggle" class="theme-btn" title="Alternar tema" aria-label="Alternar tema">
+          <span class="icon-sun" aria-hidden="true">☀️</span>
+          <span class="icon-moon" aria-hidden="true">🌙</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ═══════ CONTEÚDO PRINCIPAL ═══════ -->
+    <main class="fipe-main">
+
+      <!-- Hero -->
+      <div class="search-hero">
+        <h2>Consulta à <span class="fipe-highlight">Tabela FIPE</span></h2>
+        <p>Selecione marca, modelo e ano para obter o preço de referência oficial FIPE.</p>
+      </div>
+
+      <!-- Painel de consulta -->
+      <div class="fipe-panel">
+
+        <!-- Tipo de veículo -->
+        <div class="fipe-type-tabs" role="tablist" aria-label="Tipo de veículo">
+          <button class="fipe-tab active" data-type="carros" role="tab" aria-selected="true" id="tab-carros">
+            🚗 Carros
+          </button>
+          <button class="fipe-tab" data-type="motos" role="tab" aria-selected="false" id="tab-motos">
+            🏍️ Motos
+          </button>
+          <button class="fipe-tab" data-type="caminhoes" role="tab" aria-selected="false" id="tab-caminhoes">
+            🚛 Caminhões
+          </button>
+        </div>
+
+        <!-- Selects em cascata -->
+        <div class="fipe-selects">
+
+          <!-- Marca -->
+          <div class="fipe-select-group" id="group-marca">
+            <label for="select-marca" class="fipe-label">
+              <span class="fipe-label-num">1</span>
+              Marca
+            </label>
+            <div class="fipe-select-wrap">
+              <select id="select-marca" class="fipe-select" aria-label="Selecione a marca" disabled>
+                <option value="">Carregando marcas...</option>
+              </select>
+              <span class="fipe-select-icon" aria-hidden="true">▼</span>
+              <div class="fipe-select-loader hidden" id="loader-marca"></div>
+            </div>
+          </div>
+
+          <!-- Seta -->
+          <div class="fipe-arrow" aria-hidden="true">→</div>
+
+          <!-- Modelo -->
+          <div class="fipe-select-group" id="group-modelo">
+            <label for="select-modelo" class="fipe-label">
+              <span class="fipe-label-num">2</span>
+              Modelo
+            </label>
+            <div class="fipe-select-wrap">
+              <select id="select-modelo" class="fipe-select" aria-label="Selecione o modelo" disabled>
+                <option value="">Selecione a marca primeiro</option>
+              </select>
+              <span class="fipe-select-icon" aria-hidden="true">▼</span>
+              <div class="fipe-select-loader hidden" id="loader-modelo"></div>
+            </div>
+          </div>
+
+          <!-- Seta -->
+          <div class="fipe-arrow" aria-hidden="true">→</div>
+
+          <!-- Ano -->
+          <div class="fipe-select-group" id="group-ano">
+            <label for="select-ano" class="fipe-label">
+              <span class="fipe-label-num">3</span>
+              Ano / Combustível
+            </label>
+            <div class="fipe-select-wrap">
+              <select id="select-ano" class="fipe-select" aria-label="Selecione o ano" disabled>
+                <option value="">Selecione o modelo primeiro</option>
+              </select>
+              <span class="fipe-select-icon" aria-hidden="true">▼</span>
+              <div class="fipe-select-loader hidden" id="loader-ano"></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Botão consultar -->
+        <div class="fipe-btn-row">
+          <button id="btn-consultar" class="fipe-btn-consultar" disabled aria-label="Consultar preço FIPE">
+            <span id="btn-consultar-text">Consultar Preço FIPE</span>
+            <span class="fipe-btn-icon" aria-hidden="true">→</span>
+          </button>
+        </div>
+
+      </div><!-- /fipe-panel -->
+
+      <!-- ═══════ RESULTADO ═══════ -->
+      <div class="fipe-result hidden" id="fipe-result" aria-live="polite" aria-label="Resultado da consulta FIPE">
+
+        <!-- Card de resultado -->
+        <div class="fipe-result-card" id="fipe-result-card">
+
+          <div class="fipe-result-header">
+            <div class="fipe-result-badge">Tabela FIPE</div>
+            <div class="fipe-result-date" id="result-mes-ref"></div>
+          </div>
+
+          <div class="fipe-result-body">
+            <div class="fipe-result-vehicle">
+              <div class="fipe-result-icon" aria-hidden="true" id="result-icon">🚗</div>
+              <div class="fipe-result-info">
+                <h3 class="fipe-result-name" id="result-name"></h3>
+                <p class="fipe-result-fuel" id="result-fuel"></p>
+              </div>
+            </div>
+
+            <div class="fipe-result-price-wrap">
+              <span class="fipe-result-price-label">Preço médio de mercado</span>
+              <span class="fipe-result-price" id="result-price"></span>
+            </div>
+          </div>
+
+          <div class="fipe-result-meta">
+            <div class="fipe-meta-item">
+              <span class="fipe-meta-label">Código FIPE</span>
+              <span class="fipe-meta-value" id="result-codigo"></span>
+            </div>
+            <div class="fipe-meta-item">
+              <span class="fipe-meta-label">Marca</span>
+              <span class="fipe-meta-value" id="result-marca"></span>
+            </div>
+            <div class="fipe-meta-item">
+              <span class="fipe-meta-label">Ano Modelo</span>
+              <span class="fipe-meta-value" id="result-ano"></span>
+            </div>
+            <div class="fipe-meta-item">
+              <span class="fipe-meta-label">Combustível</span>
+              <span class="fipe-meta-value" id="result-combustivel"></span>
+            </div>
+          </div>
+
+          <div class="fipe-result-disclaimer">
+            ℹ️ O valor FIPE é uma referência de mercado. Preços reais podem variar conforme estado de conservação, quilometragem e região.
+          </div>
+
+          <!-- Ação: buscar anúncios -->
+          <div class="fipe-result-actions">
+            <a href="#" class="fipe-action-btn" id="btn-buscar-anuncios">
+              🔍 Buscar anúncios deste carro
+            </a>
+            <button class="fipe-action-btn-outline" id="btn-nova-consulta">
+              ↩️ Nova consulta
+            </button>
+          </div>
+
+        </div>
+
+      </div><!-- /fipe-result -->
+
+      <!-- Estado de erro -->
+      <div class="fipe-error hidden" id="fipe-error" role="alert">
+        <div class="empty-icon">⚠️</div>
+        <h3>Não foi possível consultar</h3>
+        <p id="fipe-error-msg">Verifique sua conexão e tente novamente.</p>
+      </div>
+
+    </main>
+
+    <!-- ═══════ RODAPÉ ═══════ -->
+    <footer class="main-footer">
+      <p>© 2026 AutoBusca — Dados FIPE fornecidos por <a href="https://deividfortuna.github.io/fipe/" target="_blank" rel="noopener" style="color:var(--accent)">Parallelum FIPE API</a>.</p>
+      <p>Valores são de referência e podem não refletir o preço de venda real.</p>
+    </footer>
+
+  </div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/fipe.js"></script>
+
+</body>
+</html>
