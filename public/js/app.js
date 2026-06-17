@@ -56,7 +56,12 @@ document.addEventListener("DOMContentLoaded", () => {
    * Carrega as URLs salvas no localStorage para o textarea.
    */
   function loadSavedUrls() {
-    const saved = Storage.loadUrls();
+    let saved = Storage.loadUrls();
+    if (saved.length === 0) {
+      saved = Storage.getDefaultUrls();
+      Storage.saveUrls(saved);
+    }
+
     if (saved.length > 0) {
       urlsTextarea.value = Storage.urlsToText(saved);
       updateUrlsCount(saved.length);
@@ -236,6 +241,15 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
     // "default" → mantém a ordem de chegada da API
+
+    // Sempre garante que os carros da própria empresa (ZM Veículos) fiquem no topo
+    copy.sort((a, b) => {
+      const aIsZM = a.dealer_name === "ZM Veículos";
+      const bIsZM = b.dealer_name === "ZM Veículos";
+      if (aIsZM && !bIsZM) return -1;
+      if (!aIsZM && bIsZM) return 1;
+      return 0; // se ambos forem ZM ou nenhum for, mantém a ordem prévia
+    });
 
     return copy;
   }

@@ -11,6 +11,7 @@ const { normalizePrice } = require("./lib/price-utils");
 
 // ── Parsers reais (um arquivo por site de revenda) ────────────────────────
 const PARSERS = [
+  require("./parsers/zmveiculos"),
   require("./parsers/amfveiculos"),
   require("./parsers/savinhomotors"),
   require("./parsers/ramiroveiculos"),
@@ -35,7 +36,7 @@ const BROWSER_HEADERS = {
   "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8",
 };
 
-const TIMEOUT_MS = 12000; // 12 segundos por site
+const TIMEOUT_MS = 8000; // 8 segundos por site para evitar timeout da Vercel (10s)
 
 // ── Handler principal ─────────────────────────────────────────────────────
 module.exports = async function handler(req, res) {
