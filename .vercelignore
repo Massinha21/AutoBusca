@@ -1,0 +1,12 @@
+# Ignore Python files and local development scripts on Vercel deployment
+parsers/
+app.py
+parsers_manager.py
+venv/
+requirements.txt
+run.bat
+requirements.txt
+requirements.txt
+*.py
+*.pyc
+__pycache__/
