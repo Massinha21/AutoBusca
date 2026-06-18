@@ -10,25 +10,23 @@
 const { normalizePrice } = require("./lib/price-utils");
 
 // ── Parsers reais (um arquivo por site de revenda) ────────────────────────
-// NOTA: pasta renomeada de api/parsers/ → api/lojas/ para evitar conflito
-// com .vercelignore que ignorava qualquer pasta chamada "parsers/"
 const PARSERS = [
-  require("./lojas/zmveiculos"),
-  require("./lojas/amfveiculos"),
-  require("./lojas/savinhomotors"),
-  require("./lojas/ramiroveiculos"),
-  require("./lojas/glveiculos"),
-  require("./lojas/autoprimerp"),
-  require("./lojas/krveiculos"),
-  require("./lojas/baseveiculos"),
-  require("./lojas/mmveiculos"),
-  require("./lojas/valvechveiculos"),
-  require("./lojas/copaveiculos"),
-  require("./lojas/automaisveiculos"),
-  require("./lojas/rossiveiculos"),
-  require("./lojas/seminovosribeirao"),
-  require("./lojas/tcamotors"),
-  require("./lojas/holfautos"),
+  require("./parsers/zmveiculos"),
+  require("./parsers/amfveiculos"),
+  require("./parsers/savinhomotors"),
+  require("./parsers/ramiroveiculos"),
+  require("./parsers/glveiculos"),
+  require("./parsers/autoprimerp"),
+  require("./parsers/krveiculos"),
+  require("./parsers/baseveiculos"),
+  require("./parsers/mmveiculos"),
+  require("./parsers/valvechveiculos"),
+  require("./parsers/copaveiculos"),
+  require("./parsers/automaisveiculos"),
+  require("./parsers/rossiveiculos"),
+  require("./parsers/seminovosribeirao"),
+  require("./parsers/tcamotors"),
+  require("./parsers/holfautos"),
 ];
 
 // Headers para imitar um navegador e evitar bloqueios simples

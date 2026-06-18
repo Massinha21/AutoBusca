@@ -1,12 +1,11 @@
 # Ignore Python files and local development scripts on Vercel deployment
-parsers/
+# NOTA: removemos a regra "parsers/" pois ela excluia api/parsers/ tambem.
+# A regra *.py abaixo ja cuida de excluir todos os arquivos Python.
 app.py
 parsers_manager.py
 venv/
 requirements.txt
 run.bat
-requirements.txt
-requirements.txt
 *.py
 *.pyc
 __pycache__/
