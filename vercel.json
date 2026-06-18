@@ -1,20 +1,3 @@
 {
-  "version": 2,
-  "outputDirectory": "public",
-  "functions": {
-    "api/buscar-carros.js": {
-      "runtime": "nodejs20.x",
-      "maxDuration": 25
-    }
-  },
-  "routes": [
-    {
-      "src": "/api/buscar-carros",
-      "dest": "/api/buscar-carros.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
-    }
-  ]
+  "outputDirectory": "public"
 }
