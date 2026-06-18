@@ -1,12 +1,14 @@
-# Ignore Python files and local development scripts on Vercel deployment
-parsers/
+# Ignora arquivos Python (o backend local Flask) no deploy da Vercel
+# O deploy usa apenas Node.js (api/) e o front-end estático (public/)
 app.py
 parsers_manager.py
-venv/
-requirements.txt
+config.py
 run.bat
 requirements.txt
-requirements.txt
+parsers/
+static/
+templates/
+venv/
+__pycache__/
 *.py
 *.pyc
-__pycache__/
