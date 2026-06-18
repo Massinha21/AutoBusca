@@ -566,6 +566,28 @@ input, textarea, select { font-family: var(--font-body); }
 }
 #sort-select:focus { border-color: var(--border-focus); }
 
+/* Botão exportar CSV */
+.btn-export-csv {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 1rem;
+  background: transparent;
+  border: 1.5px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-family: var(--font-main);
+  cursor: pointer;
+  transition: background 0.18s, border-color 0.18s, color 0.18s;
+  white-space: nowrap;
+}
+.btn-export-csv:hover {
+  background: var(--bg-secondary);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* ═══════════════════════════════════════════════════════════
    8. GRID DE RESULTADOS
    ═══════════════════════════════════════════════════════════ */

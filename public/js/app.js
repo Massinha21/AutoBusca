@@ -32,6 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnLoadDefaults= document.getElementById("btn-load-defaults");
   const urlsSavedNotice= document.getElementById("urls-saved-notice");
   const sortSelect     = document.getElementById("sort-select");
+  const btnExportCsv   = document.getElementById("btn-export-csv");
 
   // ══════════════════════════════════════════════════════════════════════
   // INICIALIZAÇÃO
@@ -105,6 +106,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const sorted = sortCars(allCars, sortSelect.value);
         UI.renderCars(sorted);
       }
+    });
+
+    // Exportar CSV
+    btnExportCsv.addEventListener("click", () => {
+      if (allCars.length > 0) exportToCsv(allCars);
     });
   }
 
@@ -252,6 +258,60 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     return copy;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // EXPORTAR CSV
+  // ══════════════════════════════════════════════════════════════════════
+
+  /**
+   * Gera e baixa um arquivo CSV com os resultados da busca atual.
+   * Colunas: Título, Preço, Revenda, Link do Anúncio, URL da Imagem
+   *
+   * @param {Array} cars - Array de carros retornados pela API
+   */
+  function exportToCsv(cars) {
+    const query = searchInput.value.trim() || "busca";
+    const date  = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+    // Cabeçalho
+    const headers = ["Título", "Preço", "Revenda", "Link do Anúncio", "URL da Imagem"];
+
+    // Linhas
+    const rows = cars.map(car => [
+      csvCell(car.title       || ""),
+      csvCell(car.price       || ""),
+      csvCell(car.dealer_name || ""),
+      csvCell(car.url         || ""),
+      csvCell(car.image_url   || ""),
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map(row => row.join(","))
+      .join("\r\n");
+
+    // BOM para garantir acentos no Excel
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url  = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href     = url;
+    link.download = `autobusca_${query}_${date}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  /**
+   * Escapa um valor para uso em célula CSV:
+   * envolve em aspas duplas e escapa aspas internas.
+   * @param {string} value
+   * @returns {string}
+   */
+  function csvCell(value) {
+    const str = String(value).replace(/"/g, '""');
+    return `"${str}"`;
   }
 
   // ══════════════════════════════════════════════════════════════════════
