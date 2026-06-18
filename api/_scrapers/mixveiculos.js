@@ -27,9 +27,20 @@ async function search(query, fetchHtml) {
       let title = el.find(".name a").first().text() || a.attr("title") || "Veículo";
       title = title.replace(/\s+/g, " ").trim();
 
-      // Imagem
+      // Imagem — tenta src, depois data-src (lazy-load), depois o background inline do a.has-second-image
       const img = el.find(".image img").first();
-      let image_url = img.attr("src") || null;
+      let image_url = null;
+      if (img.length) {
+        image_url = img.attr("src") || img.attr("data-src") || null;
+      }
+      
+      // Se ainda não achou, tenta extrair o background inline do link
+      if (!image_url) {
+        const style = el.find(".image a").first().attr("style") || "";
+        const bgm   = style.match(/url\(['"']?(.*?)['"']?\)/);
+        if (bgm) image_url = bgm[1];
+      }
+
       if (image_url && image_url.startsWith("//")) image_url = "https:" + image_url;
 
       // Preço
