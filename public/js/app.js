@@ -41,6 +41,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const sortSelect     = document.getElementById("sort-select");
   const btnExportCsv   = document.getElementById("btn-export-csv");
 
+  // Elementos do painel de filtros
+  const filtersSidebar = document.getElementById("filters-sidebar");
+  const btnToggleFilters = document.getElementById("btn-toggle-filters");
+  const btnCloseFilters = document.getElementById("btn-close-filters");
+  const filterDealers = document.getElementById("filter-dealers");
+  const filterPriceRange = document.getElementById("filter-price-range");
+  const priceFilterValue = document.getElementById("price-filter-value");
+  const filterYearMin = document.getElementById("filter-year-min");
+  const filterKmRange = document.getElementById("filter-km-range");
+  const kmFilterValue = document.getElementById("km-filter-value");
+  const btnClearFilters = document.getElementById("btn-clear-filters");
+
   // ══════════════════════════════════════════════════════════════════════
   // INICIALIZAÇÃO
   // ══════════════════════════════════════════════════════════════════════
@@ -49,6 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadThemePreference();
     loadSavedUrls();
     bindEvents();
+    initFilters();
     checkUrlParams();
   }
 
@@ -245,6 +258,8 @@ document.addEventListener("DOMContentLoaded", () => {
     setSearchLoading(true);
     UI.showSkeletons(6);
     UI.hideResultsControls();
+    if (filtersSidebar) filtersSidebar.classList.add("hidden");
+    if (btnToggleFilters) btnToggleFilters.classList.add("hidden");
 
     allCars = [];
     const controller = new AbortController();
@@ -348,7 +363,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (cars.length === 0) {
       UI.renderNoResults();
+      if (filtersSidebar) filtersSidebar.classList.add("hidden");
+      if (btnToggleFilters) btnToggleFilters.classList.add("hidden");
     } else {
+      populateFiltersData(cars);
+      resetFiltersUI();
       const enriched = enrichCarsWithFipe(cars);
       const sorted = sortCars(enriched, sortSelect.value);
       UI.renderCars(sorted);
@@ -604,6 +623,239 @@ document.addEventListener("DOMContentLoaded", () => {
       const enriched = enrichCarsWithFipe(allCars);
       const sorted = sortCars(enriched, sortSelect.value);
       UI.renderCars(sorted);
+    }
+  }
+
+  // ── Painel de Filtros Laterais ──────────────────────────────────────
+  let sidebarOverlay = null;
+
+  function initFilters() {
+    // Cria o overlay no body para fechar os filtros no mobile ao clicar fora
+    sidebarOverlay = document.createElement("div");
+    sidebarOverlay.className = "sidebar-overlay";
+    document.body.appendChild(sidebarOverlay);
+
+    // Eventos de abrir/fechar filtros no mobile
+    if (btnToggleFilters) {
+      btnToggleFilters.addEventListener("click", () => {
+        filtersSidebar.classList.add("is-open");
+        sidebarOverlay.classList.add("active");
+      });
+    }
+
+    if (btnCloseFilters) {
+      btnCloseFilters.addEventListener("click", closeMobileFilters);
+    }
+
+    sidebarOverlay.addEventListener("click", closeMobileFilters);
+
+    // Eventos de alteração dos inputs de filtros
+    if (filterPriceRange) {
+      filterPriceRange.addEventListener("input", handlePriceFilterChange);
+    }
+    if (filterKmRange) {
+      filterKmRange.addEventListener("input", handleKmFilterChange);
+    }
+    if (filterYearMin) {
+      filterYearMin.addEventListener("change", applyFilters);
+    }
+    if (btnClearFilters) {
+      btnClearFilters.addEventListener("click", resetFilters);
+    }
+  }
+
+  function closeMobileFilters() {
+    if (filtersSidebar) filtersSidebar.classList.remove("is-open");
+    if (sidebarOverlay) sidebarOverlay.classList.remove("active");
+  }
+
+  function handlePriceFilterChange() {
+    const val = parseInt(filterPriceRange.value);
+    const maxVal = parseInt(filterPriceRange.max);
+    if (val === maxVal) {
+      priceFilterValue.textContent = "Qualquer valor";
+    } else {
+      priceFilterValue.textContent = `Até ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(val)}`;
+    }
+    applyFilters();
+  }
+
+  function handleKmFilterChange() {
+    const val = parseInt(filterKmRange.value);
+    const maxVal = parseInt(filterKmRange.max);
+    if (val === maxVal) {
+      kmFilterValue.textContent = "Qualquer KM";
+    } else {
+      kmFilterValue.textContent = `Até ${val.toLocaleString("pt-BR")} km`;
+    }
+    applyFilters();
+  }
+
+  function populateFiltersData(cars) {
+    if (cars.length === 0) {
+      filtersSidebar.classList.add("hidden");
+      if (btnToggleFilters) btnToggleFilters.classList.add("hidden");
+      return;
+    }
+
+    // Exibe a sidebar e o botão
+    filtersSidebar.classList.remove("hidden");
+    if (btnToggleFilters) btnToggleFilters.classList.remove("hidden");
+
+    // 1. Popula Revendas
+    const dealers = [...new Set(cars.map(c => c.dealer_name))].sort();
+    
+    // Captura as revendas marcadas anteriormente para não perder seleção
+    const previouslyChecked = new Set();
+    filterDealers.querySelectorAll("input[type='checkbox']:checked").forEach(cb => {
+      previouslyChecked.add(cb.value);
+    });
+    
+    filterDealers.innerHTML = "";
+    dealers.forEach(dealer => {
+      // Se não havia nada marcado anteriormente (nova busca), marca tudo por padrão
+      const isChecked = previouslyChecked.size === 0 || previouslyChecked.has(dealer);
+      
+      const label = document.createElement("label");
+      label.className = "filter-checkbox-label";
+      label.innerHTML = `
+        <input type="checkbox" value="${dealer}" ${isChecked ? "checked" : ""}>
+        <span>${dealer}</span>
+      `;
+      filterDealers.appendChild(label);
+      
+      label.querySelector("input").addEventListener("change", applyFilters);
+    });
+
+    // 2. Popula Anos
+    const years = [];
+    cars.forEach(c => {
+      if (c.year) {
+        const match = c.year.match(/\d{4}/);
+        if (match) {
+          const y = parseInt(match[0]);
+          if (!isNaN(y)) years.push(y);
+        }
+      }
+    });
+    const uniqueYears = [...new Set(years)].sort((a, b) => b - a);
+
+    const previousYear = filterYearMin.value;
+    filterYearMin.innerHTML = '<option value="all">Qualquer ano</option>';
+    uniqueYears.forEach(y => {
+      const option = document.createElement("option");
+      option.value = y;
+      option.textContent = `${y} ou mais novo`;
+      if (y.toString() === previousYear) {
+        option.selected = true;
+      }
+      filterYearMin.appendChild(option);
+    });
+  }
+
+  function applyFilters() {
+    if (allCars.length === 0) return;
+
+    // 1. Coleciona filtros selecionados
+    const checkedDealers = new Set();
+    filterDealers.querySelectorAll("input[type='checkbox']:checked").forEach(cb => {
+      checkedDealers.add(cb.value);
+    });
+
+    const maxPrice = parseInt(filterPriceRange.value);
+    const maxPriceLimit = parseInt(filterPriceRange.max);
+
+    const minYearVal = filterYearMin.value;
+    const minYear = minYearVal === "all" ? null : parseInt(minYearVal);
+
+    const maxKm = parseInt(filterKmRange.value);
+    const maxKmLimit = parseInt(filterKmRange.max);
+
+    // 2. Aplica os filtros sobre a lista original
+    const filteredCars = allCars.filter(car => {
+      // Filtro de revenda
+      if (checkedDealers.size > 0 && !checkedDealers.has(car.dealer_name)) {
+        return false;
+      }
+
+      // Filtro de preço
+      if (maxPrice < maxPriceLimit) {
+        if (car.price_value && car.price_value > maxPrice) {
+          return false;
+        }
+      }
+
+      // Filtro de ano
+      if (minYear) {
+        if (car.year) {
+          const match = car.year.match(/\d{4}/);
+          const carYear = match ? parseInt(match[0]) : null;
+          if (carYear && carYear < minYear) {
+            return false;
+          }
+        }
+      }
+
+      // Filtro de KM
+      if (maxKm < maxKmLimit) {
+        if (car.km) {
+          const cleanKM = car.km.replace(/[^\d]/g, "");
+          const carKmValue = parseInt(cleanKM);
+          if (!isNaN(carKmValue) && carKmValue > maxKm) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    });
+
+    // 3. Renderiza os cards filtrados
+    const enriched = enrichCarsWithFipe(filteredCars);
+    const sorted = sortCars(enriched, sortSelect.value);
+    
+    if (sorted.length === 0) {
+      UI.renderNoResultsFiltered();
+    } else {
+      UI.renderCars(sorted);
+    }
+    
+    UI.updateResultsCount(sorted.length);
+  }
+
+  function resetFilters() {
+    if (filterPriceRange) {
+      filterPriceRange.value = filterPriceRange.max;
+      priceFilterValue.textContent = "Qualquer valor";
+    }
+    if (filterKmRange) {
+      filterKmRange.value = filterKmRange.max;
+      kmFilterValue.textContent = "Qualquer KM";
+    }
+    if (filterYearMin) {
+      filterYearMin.value = "all";
+    }
+    
+    if (filterDealers) {
+      filterDealers.querySelectorAll("input[type='checkbox']").forEach(cb => {
+        cb.checked = true;
+      });
+    }
+
+    applyFilters();
+  }
+
+  function resetFiltersUI() {
+    if (filterPriceRange) {
+      filterPriceRange.value = filterPriceRange.max;
+      priceFilterValue.textContent = "Qualquer valor";
+    }
+    if (filterKmRange) {
+      filterKmRange.value = filterKmRange.max;
+      kmFilterValue.textContent = "Qualquer KM";
+    }
+    if (filterYearMin) {
+      filterYearMin.value = "all";
     }
   }
 

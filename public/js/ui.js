@@ -221,6 +221,20 @@ const UI = (() => {
   }
 
   /**
+   * Mostra mensagem "Nenhum resultado corresponde aos filtros".
+   */
+  function renderNoResultsFiltered() {
+    const grid = els.resultsGrid();
+    grid.innerHTML = `
+      <div class="empty-state" role="status">
+        <div class="empty-icon" aria-hidden="true">⚙️</div>
+        <h3>Nenhum veículo corresponde aos filtros</h3>
+        <p>Tente ajustar ou limpar seus filtros avançados na barra lateral para ver os anúncios novamente.</p>
+      </div>
+    `;
+  }
+
+  /**
    * Mostra mensagem de erro geral.
    * @param {string} message - Descrição do erro
    */
@@ -380,11 +394,20 @@ const UI = (() => {
     }
   }
 
+  /**
+   * Atualiza o contador de resultados exibido.
+   */
+  function updateResultsCount(count) {
+    const el = els.totalResultsCount();
+    if (el) el.textContent = count;
+  }
+
   // Interface pública do módulo
   return {
     renderCars,
     showSkeletons,
     renderNoResults,
+    renderNoResultsFiltered,
     renderError,
     showProgress,
     hideProgress,
@@ -394,5 +417,6 @@ const UI = (() => {
     hideResultsControls,
     showFipeCompareBanner,
     hideFipeCompareBanner,
+    updateResultsCount,
   };
 })();

@@ -144,6 +144,9 @@
           Encontramos <strong id="total-results-count">0</strong> veículos correspondentes.
         </div>
         <div class="controls-right">
+          <button type="button" id="btn-toggle-filters" class="btn-toggle-filters" aria-label="Filtrar resultados">
+            ⚙️ Filtros
+          </button>
           <div class="sort-wrapper">
             <label for="sort-select">Ordenar por:</label>
             <select id="sort-select" aria-label="Critério de ordenação">
@@ -161,14 +164,78 @@
       <!-- Banner de comparação da Tabela FIPE (inserido dinamicamente) -->
       <div id="fipe-compare-container"></div>
 
-      <!-- ═══════ GRID DE RESULTADOS ═══════ -->
-      <!-- Cards dos carros encontrados são inseridos aqui pelo JS -->
-      <div class="results-grid" id="results-grid" aria-label="Resultados da busca" aria-live="polite">
-        <!-- Estado inicial (antes de qualquer busca) -->
-        <div class="empty-state" id="initial-state">
-          <div class="empty-icon" aria-hidden="true">🚗</div>
-          <h3>Seu buscador está pronto</h3>
-          <p>Digite um termo acima e clique em Buscar para pesquisar em todas as revendas cadastradas simultaneamente.</p>
+      <!-- ═══════ SEÇÃO DE LAYOUT DE RESULTADOS E FILTROS ═══════ -->
+      <div class="search-results-layout">
+        <!-- Painel de Filtros Laterais -->
+        <aside class="filters-sidebar hidden" id="filters-sidebar" aria-label="Filtros de veículos">
+          <div class="filters-sidebar-header">
+            <h3>Filtros Avançados</h3>
+            <button type="button" id="btn-close-filters" class="btn-close-filters" aria-label="Fechar filtros">✕</button>
+          </div>
+          <div class="filters-sidebar-body">
+            <!-- Filtro por Revenda -->
+            <div class="filter-group">
+              <h4>Revendas</h4>
+              <div class="filter-options" id="filter-dealers">
+                <!-- Checkboxes inseridos dinamicamente pelo JS -->
+              </div>
+            </div>
+            
+            <!-- Filtro por Preço -->
+            <div class="filter-group">
+              <div class="filter-group-header">
+                <h4>Preço Máximo</h4>
+                <span id="price-filter-value">Qualquer valor</span>
+              </div>
+              <div class="price-range-wrapper">
+                <input type="range" id="filter-price-range" min="0" max="300000" step="5000" value="300000">
+                <div class="range-labels">
+                  <span id="price-min-label">R$ 0</span>
+                  <span id="price-max-label">R$ 300mil+</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Filtro por Ano -->
+            <div class="filter-group">
+              <h4>Ano Mínimo</h4>
+              <select id="filter-year-min" class="filter-select">
+                <option value="all">Qualquer ano</option>
+              </select>
+            </div>
+
+            <!-- Filtro por KM Máximo -->
+            <div class="filter-group">
+              <div class="filter-group-header">
+                <h4>Quilometragem Máxima</h4>
+                <span id="km-filter-value">Qualquer KM</span>
+              </div>
+              <div class="km-range-wrapper">
+                <input type="range" id="filter-km-range" min="0" max="200000" step="10000" value="200000">
+                <div class="range-labels">
+                  <span id="km-min-label">0 km</span>
+                  <span id="km-max-label">200mil km+</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Botão de Limpar Filtros -->
+            <button type="button" id="btn-clear-filters" class="btn-clear-filters">
+              Limpar Filtros
+            </button>
+          </div>
+        </aside>
+
+        <!-- Grid de Resultados -->
+        <div class="results-grid-wrapper">
+          <div class="results-grid" id="results-grid" aria-label="Resultados da busca" aria-live="polite">
+            <!-- Estado inicial (antes de qualquer busca) -->
+            <div class="empty-state" id="initial-state">
+              <div class="empty-icon" aria-hidden="true">🚗</div>
+              <h3>Seu buscador está pronto</h3>
+              <p>Digite um termo acima e clique em Buscar para pesquisar em todas as revendas cadastradas simultaneamente.</p>
+            </div>
+          </div>
         </div>
       </div>
 
