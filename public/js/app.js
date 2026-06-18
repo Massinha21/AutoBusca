@@ -17,6 +17,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // ── Estado global da aplicação ─────────────────────────────────────────
   let allCars    = [];   // Array com todos os carros da última busca
   let isSearching = false; // Evita múltiplas buscas simultâneas
+  let activeEventSource = null; // Instância de EventSource ativa para streaming
+  let fipePriceRef = null; // Preço FIPE de referência para comparação
+  let fipeModelRef = null; // Nome do modelo FIPE de referência
+
 
   // ── Elementos do DOM ───────────────────────────────────────────────────
   const searchForm     = document.getElementById("search-form");
@@ -42,6 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadThemePreference();
     loadSavedUrls();
     bindEvents();
+    checkUrlParams();
   }
 
   /**
@@ -103,7 +108,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Ordenação dos resultados
     sortSelect.addEventListener("change", () => {
       if (allCars.length > 0) {
-        const sorted = sortCars(allCars, sortSelect.value);
+        const enriched = enrichCarsWithFipe(allCars);
+        const sorted = sortCars(enriched, sortSelect.value);
         UI.renderCars(sorted);
       }
     });
@@ -140,60 +146,106 @@ document.addEventListener("DOMContentLoaded", () => {
     await runSearch(query, urls);
   }
 
-  /**
-   * Executa a busca: chama a API, atualiza UI de progresso e exibe resultados.
-   *
-   * @param {string}   query - Termo de busca
-   * @param {string[]} urls  - URLs das revendas a consultar
-   */
   async function runSearch(query, urls) {
     isSearching = true;
+
+    // Cancela busca anterior se ainda estiver rodando
+    if (activeEventSource) {
+      activeEventSource.close();
+      activeEventSource = null;
+    }
 
     // ── Prepara a UI para o estado de carregamento ──
     setSearchLoading(true);
     UI.showSkeletons(6);
-    UI.showProgress(Math.max(urls.length, 1));
     UI.hideResultsControls();
-    UI.updateStoreBadge("Buscando...", "searching", "Em andamento");
 
     allCars = [];
+    const controller = new AbortController();
+    let gotCache = false;
+
+    // Timeout de 1.2 segundos para a busca rápida no cache (GET)
+    const cacheTimeout = setTimeout(() => {
+      if (!gotCache) {
+        controller.abort(); // Cancela a requisição GET lenta
+        startStreamingSearch(query, urls); // Fallback para streaming em tempo real
+      }
+    }, 1200);
 
     try {
-      const data = await Api.buscarCarros(query, urls);
+      const data = await Api.buscarCarros(query, controller.signal);
+      clearTimeout(cacheTimeout);
+      gotCache = true;
 
-      // Processa os resultados retornados
+      // Se respondeu rápido (Cache HIT ou STALE no Edge/Browser), exibe na hora!
       allCars = data.results || [];
-
-      // Atualiza badges de cada loja no painel de progresso
-      if (data.sites && data.sites.length > 0) {
-        data.sites.forEach((site, i) => {
-          // Simula progresso escalonado para feedback visual
-          setTimeout(() => {
-            UI.setProgressBar(i + 1, data.sites.length, `Processado: ${site.name}`);
-            UI.updateStoreBadge(
-              site.name,
-              site.status,
-              site.status === "error"
-                ? `Erro: ${site.error || "falha"}`
-                : `${site.count} enc.`
-            );
-          }, i * 120); // Atraso para efeito visual cascata
-        });
-
-        // Após todos os badges, exibe os resultados finais
-        const finalDelay = data.sites.length * 120 + 200;
-        setTimeout(() => finishSearch(allCars, query), finalDelay);
-      } else {
-        finishSearch(allCars, query);
-      }
-
+      finishSearch(allCars, query);
     } catch (err) {
-      console.error("[AutoBusca] Erro na busca:", err);
-      UI.hideProgress();
-      UI.renderError(err.message || "Erro de conexão com o servidor. Tente novamente.");
-      setSearchLoading(false);
-      isSearching = false;
+      clearTimeout(cacheTimeout);
+
+      // Se o erro for de Abort (devido ao timeout do cache), ignoramos pois o stream já iniciou.
+      // Para qualquer outro erro de rede imediato, cai para o stream como fallback.
+      if (err.name !== "AbortError" && !gotCache) {
+        console.warn("[AutoBusca] Falha ao ler cache, iniciando streaming:", err);
+        startStreamingSearch(query, urls);
+      }
     }
+  }
+
+  /**
+   * Dispara a busca em tempo real via streaming (SSE).
+   */
+  function startStreamingSearch(query, urls) {
+    let processedCount = 0;
+    let totalSites = urls.length || 1;
+
+    UI.showProgress(totalSites);
+
+    activeEventSource = Api.buscarCarrosStream(query, {
+      onInit: (data) => {
+        const sites = data.sites || [];
+        totalSites = sites.length;
+        UI.showProgress(totalSites);
+        sites.forEach(site => {
+          UI.updateStoreBadge(site.name, "waiting", "Aguardando...");
+        });
+      },
+      onSiteResult: (data) => {
+        processedCount++;
+        UI.setProgressBar(processedCount, totalSites, `Processando: ${data.name}`);
+        UI.updateStoreBadge(
+          data.name,
+          data.status,
+          data.status === "error"
+            ? `Erro: ${data.error || "falha"}`
+            : `${data.count} enc.`
+        );
+
+        if (data.status === "success" && data.results && data.results.length > 0) {
+          allCars = allCars.concat(data.results);
+          const enriched = enrichCarsWithFipe(allCars);
+          const sorted = sortCars(enriched, sortSelect.value);
+          UI.renderCars(sorted);
+          UI.showResultsControls(allCars.length);
+        }
+      },
+      onDone: () => {
+        activeEventSource = null;
+        finishSearch(allCars, query);
+      },
+      onError: (err) => {
+        activeEventSource = null;
+        console.error("[AutoBusca] Erro no streaming de resultados:", err);
+        if (allCars.length === 0) {
+          UI.hideProgress();
+          UI.renderError("Erro na conexão com o servidor de streaming. Tente novamente.");
+          setSearchLoading(false);
+          isSearching = false;
+        } else {
+          finishSearch(allCars, query);
+        }
+      }
+    });
   }
 
   /**
@@ -211,7 +263,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (cars.length === 0) {
       UI.renderNoResults();
     } else {
-      const sorted = sortCars(cars, sortSelect.value);
+      const enriched = enrichCarsWithFipe(cars);
+      const sorted = sortCars(enriched, sortSelect.value);
       UI.renderCars(sorted);
       UI.showResultsControls(cars.length);
     }
@@ -388,6 +441,84 @@ document.addEventListener("DOMContentLoaded", () => {
     searchBtn.disabled  = loading;
     searchInput.disabled = loading;
     searchBtn.textContent = loading ? "Buscando..." : "Buscar";
+  }
+
+  /**
+   * Enriquece a lista de carros com dados de comparação da FIPE se houver referência.
+   * @param {Array} cars 
+   * @returns {Array}
+   */
+  function enrichCarsWithFipe(cars) {
+    return cars.map(car => {
+      if (fipePriceRef && car.price_value && car.price_value > 0) {
+        const diff = car.price_value - fipePriceRef;
+        const percent = (diff / fipePriceRef) * 100;
+        return {
+          ...car,
+          comparison: { diff, percent }
+        };
+      } else {
+        // Remove comparison if not matching/active
+        const { comparison, ...rest } = car;
+        return rest;
+      }
+    });
+  }
+
+  /**
+   * Verifica se há parâmetros de busca e FIPE na URL e inicializa o estado de comparação.
+   */
+  function checkUrlParams() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const query = urlParams.get("q");
+    const fipePrice = urlParams.get("fipe_price");
+    const fipeName = urlParams.get("fipe_name");
+
+    if (fipePrice && fipeName) {
+      fipePriceRef = parseFloat(fipePrice);
+      fipeModelRef = decodeURIComponent(fipeName);
+
+      if (!isNaN(fipePriceRef)) {
+        const formatted = new Intl.NumberFormat("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+          maximumFractionDigits: 0
+        }).format(fipePriceRef);
+
+        UI.showFipeCompareBanner(fipeModelRef, formatted, handleClearFipeCompare);
+      }
+    }
+
+    if (query) {
+      searchInput.value = decodeURIComponent(query);
+      const urlsText = urlsTextarea.value;
+      const urls = Storage.parseUrlText(urlsText);
+      runSearch(searchInput.value, urls);
+    }
+  }
+
+  /**
+   * Limpa o estado de comparação da FIPE, atualiza a URL e re-renderiza.
+   */
+  function handleClearFipeCompare() {
+    fipePriceRef = null;
+    fipeModelRef = null;
+
+    UI.hideFipeCompareBanner();
+
+    // Atualiza a URL para remover os parâmetros da FIPE sem recarregar
+    const url = new URL(window.location);
+    url.searchParams.delete("fipe_price");
+    url.searchParams.delete("fipe_name");
+    url.searchParams.delete("fipe_code");
+    window.history.replaceState({}, "", url);
+
+    // Re-renderiza a lista atual sem os badges de FIPE
+    if (allCars.length > 0) {
+      const enriched = enrichCarsWithFipe(allCars);
+      const sorted = sortCars(enriched, sortSelect.value);
+      UI.renderCars(sorted);
+    }
   }
 
   // ── Inicializa tudo ao carregar ─────────────────────────────────────

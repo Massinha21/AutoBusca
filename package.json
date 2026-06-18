@@ -10,6 +10,6 @@
     "cheerio": "^1.0.0"
   },
   "scripts": {
-    "dev": "vercel dev"
+    "dev-vercel": "vercel dev"
   }
 }

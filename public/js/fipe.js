@@ -299,9 +299,16 @@ document.addEventListener("DOMContentLoaded", () => {
       ? `Referência: ${dados.MesReferencia}`
       : "";
 
-    // Configura o botão "Buscar anúncios" para ir ao buscador com o modelo pré-preenchido
+    // Configura o botão "Buscar anúncios" para ir ao buscador com o modelo pré-preenchido e os parâmetros FIPE
     const nomeModelo = (dados.Modelo || modeloAtual.nome || "").split(" ").slice(0, 3).join(" ");
-    btnBuscarAnuncios.href = `index.html?q=${encodeURIComponent(nomeModelo)}`;
+    const cleanPriceVal = parseFloat(
+      (dados.Valor || "")
+        .replace(/R\$\s*/gi, "")
+        .replace(/\./g, "")
+        .replace(",", ".")
+        .replace(/[^\d.]/g, "")
+    ) || 0;
+    btnBuscarAnuncios.href = `index.html?q=${encodeURIComponent(nomeModelo)}&fipe_price=${cleanPriceVal}&fipe_name=${encodeURIComponent(dados.Modelo || modeloAtual.nome)}&fipe_code=${dados.CodigoFipe || ""}`;
 
     // Exibe o card, esconde erro
     fipeError.classList.add("hidden");

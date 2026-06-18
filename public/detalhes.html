@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Detalhes do Veículo — AutoBusca</title>
+  <meta name="description" content="Visualização detalhada do veículo anunciado com especificações completas e comparação de preço da Tabela FIPE.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>">
+
+  <!-- PWA & Mobile support -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#090d18">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+</head>
+
+<body class="dark-theme">
+
+  <div class="app-container">
+
+    <!-- ═══════ CABEÇALHO ═══════ -->
+    <header class="main-header">
+      <div class="logo-area">
+        <a href="index.html" style="display:flex;align-items:center;gap:0.65rem;text-decoration:none;color:inherit;">
+          <span class="logo-icon">🚗</span>
+          <h1>Auto<span>Busca</span></h1>
+        </a>
+      </div>
+      <div class="header-actions">
+        <a href="index.html" class="nav-link-btn" aria-label="Ir para o buscador de veículos">
+          🔍 Buscador
+        </a>
+        <a href="fipe.html" class="nav-link-btn" aria-label="Ir para a consulta FIPE">
+          📋 Tabela FIPE
+        </a>
+        <button id="theme-toggle" class="theme-btn" title="Alternar tema" aria-label="Alternar tema">
+          <span class="icon-sun" aria-hidden="true">☀️</span>
+          <span class="icon-moon" aria-hidden="true">🌙</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ═══════ CONTEÚDO PRINCIPAL ═══════ -->
+    <main class="details-main">
+      <div class="back-nav">
+        <button id="btn-back" class="btn-back" aria-label="Voltar para a página anterior">
+          ← Voltar para a busca
+        </button>
+      </div>
+
+      <!-- Detalhes do Carro -->
+      <div class="details-grid" id="details-container">
+        <!-- Esqueleto/Carregamento inicial -->
+        <div class="details-loading" style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
+          <div class="spinner"></div>
+          <p style="margin-top: 1rem; color: var(--text-secondary);">Carregando informações do veículo...</p>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/storage.js"></script>
+  <script src="js/detalhes.js"></script>
+  <script>
+    // Inicialização do tema na página de detalhes
+    document.addEventListener("DOMContentLoaded", () => {
+      const theme = Storage.loadTheme();
+      document.body.classList.remove("dark-theme", "light-theme");
+      document.body.classList.add(`${theme}-theme`);
+
+      const themeToggle = document.getElementById("theme-toggle");
+      if (themeToggle) {
+        themeToggle.addEventListener("click", () => {
+          const isDark = document.body.classList.contains("dark-theme");
+          const newTheme = isDark ? "light" : "dark";
+          document.body.classList.remove("dark-theme", "light-theme");
+          document.body.classList.add(`${newTheme}-theme`);
+          Storage.saveTheme(newTheme);
+        });
+      }
+
+      // Registro do Service Worker (Offline PWA)
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+          .then(() => console.log('[Service Worker] Registrado com sucesso'))
+          .catch((err) => console.warn('[Service Worker] Falha no registro:', err));
+      }
+    });
+  </script>
+</body>
+</html>

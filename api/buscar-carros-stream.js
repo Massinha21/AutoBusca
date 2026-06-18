@@ -1,12 +1,10 @@
-// api/buscar-carros.js
-// Production version v1.0.1
+// api/buscar-carros-stream.js
+// Production version v1.0.0
 //
-// Endpoint principal — Serverless Function da Vercel
-// Recebe: POST { query: string }
-// Retorna: { query, total, sites, results }
+// Endpoint de Streaming — Serverless Function da Vercel (SSE)
+// Recebe: GET /api/buscar-carros-stream?query=string
+// Retorna: Stream de dados formatados como Server-Sent Events (SSE)
 //
-// Busca em TODOS os parsers cadastrados em paralelo (Promise.allSettled).
-// Se um site falhar, os outros continuam normalmente.
 
 const { normalizePrice } = require("./lib/price-utils");
 const { sendWebhookAlert } = require("./lib/webhook-utils");
@@ -51,53 +49,49 @@ const BROWSER_HEADERS = {
 
 const TIMEOUT_MS = 8000; // 8 segundos por site para evitar timeout da Vercel (10s)
 
+// Função auxiliar para formatar e enviar dados no protocolo SSE
+function sendSSE(res, event, data) {
+  res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  if (typeof res.flush === "function") res.flush();
+}
+
 // ── Handler principal ─────────────────────────────────────────────────────
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin",  "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
 
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST" && req.method !== "GET") {
-    return res.status(405).json({ error: "Use GET ou POST." });
+  if (req.method !== "GET") {
+    return res.status(405).json({ error: "Use GET para streaming (SSE)." });
   }
 
-  const query = req.method === "GET" ? (req.query.query || "") : (req.body?.query || "");
+  const { query } = req.query || {};
   if (!query || !query.trim()) {
-    return res.status(400).json({ error: "Campo 'query' obrigatório." });
+    return res.status(400).json({ error: "Campo 'query' obrigatório na query string." });
   }
 
   const term = query.trim();
 
-  // Configura cabeçalho de cache CDN (Edge) com stale-while-revalidate para requisições GET
-  if (req.method === "GET") {
-    res.setHeader(
-      "Cache-Control",
-      "public, max-age=0, s-maxage=1800, stale-while-revalidate=600"
-    );
-  }
+  // Envia lista inicial de sites para configurar barra de progresso no front-end
+  sendSSE(res, "init", {
+    sites: PARSERS.map(p => ({ name: p.name }))
+  });
 
-  // Busca em todos os parsers em paralelo — falhas individuais não derrubam o resto
-  const settled = await Promise.allSettled(
-    PARSERS.map(parser =>
-      withTimeout(
+  // Executa cada parser e envia os resultados individualmente conforme terminam
+  const promises = PARSERS.map(async (parser) => {
+    try {
+      const rawCars = await withTimeout(
         parser.search(term, fetchHtml),
         TIMEOUT_MS,
         parser.name
-      )
-    )
-  );
+      );
 
-  // Agrega resultados e estatísticas por loja
-  const allResults = [];
-  const sites      = [];
-  const webhookPromises = [];
-
-  settled.forEach((outcome, i) => {
-    const parser = PARSERS[i];
-
-    if (outcome.status === "fulfilled") {
-      const cars = (outcome.value || []).map(car => {
+      const cars = (rawCars || []).map(car => {
         const { display, value } = normalizePrice(car.price);
         const meta = extractMetadataFromTitle(car.title);
         return {
@@ -110,35 +104,31 @@ module.exports = async function handler(req, res) {
         };
       });
 
-      sites.push({ name: parser.name, status: "success", count: cars.length });
-      allResults.push(...cars);
-    } else {
-      const errMsg = outcome.reason?.message || "Falha desconhecida";
-      console.error(`[${parser.name}] Erro:`, errMsg);
-      sites.push({
-        name:   parser.name,
-        status: "error",
-        count:  0,
-        error:  String(errMsg).slice(0, 120),
+      sendSSE(res, "site-result", {
+        name: parser.name,
+        status: "success",
+        count: cars.length,
+        results: cars
       });
-      // Agenda envio do webhook de alerta
-      webhookPromises.push(sendWebhookAlert(parser.name, errMsg, `Busca (JSON) - Termo: "${term}"`));
+    } catch (err) {
+      const errMsg = err.message || "Falha desconhecida";
+      console.error(`[${parser.name}] Erro no stream:`, errMsg);
+      // Dispara alerta via webhook de forma assíncrona
+      await sendWebhookAlert(parser.name, errMsg, `Busca (Stream) - Termo: "${term}"`);
+      sendSSE(res, "site-result", {
+        name: parser.name,
+        status: "error",
+        count: 0,
+        error: String(errMsg).slice(0, 120)
+      });
     }
   });
 
-  // Aguarda todos os webhooks disparados concluírem antes de responder
-  if (webhookPromises.length > 0) {
-    await Promise.all(webhookPromises).catch(err => {
-      console.error("[Monitoramento] Erro ao aguardar envio de webhooks:", err);
-    });
-  }
+  // Aguarda todos os scrapers concluírem para fechar a conexão
+  await Promise.all(promises);
 
-  return res.status(200).json({
-    query: term,
-    total: allResults.length,
-    sites,
-    results: allResults,
-  });
+  sendSSE(res, "done", { finished: true });
+  res.end();
 };
 
 // ── Utilitários ───────────────────────────────────────────────────────────

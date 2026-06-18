@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Status dos Scrapers — AutoBusca</title>
+  <!-- Fontes do Google -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- CSS Principal -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- PWA & Mobile support -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#090d18">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+  
+  <style>
+    /* Estilos específicos para o dashboard de status */
+    .status-container {
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+    
+    .status-header-wrap {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    
+    .status-title h1 {
+      font-family: var(--font-heading);
+      font-size: 2.2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff 0%, var(--text-secondary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 5px;
+    }
+    
+    .light-theme .status-title h1 {
+      background: linear-gradient(135deg, var(--text-primary) 0%, #475569 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .status-actions {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+    
+    .btn-action {
+      background-color: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      font-family: var(--font-body);
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: background-color 0.25s ease, transform 0.15s ease;
+      text-decoration: none;
+    }
+    
+    .btn-action:hover {
+      background-color: var(--accent-hover);
+    }
+    
+    .btn-action:active {
+      transform: scale(0.97);
+    }
+    
+    .btn-secondary {
+      background-color: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+    }
+    
+    .btn-secondary:hover {
+      background-color: var(--bg-tertiary);
+    }
+    
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    
+    .summary-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .summary-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+    }
+    
+    .card-healthy::before { background-color: var(--accent-green); }
+    .card-unhealthy::before { background-color: var(--accent-red); }
+    .card-duration::before { background-color: var(--accent-amber); }
+    .card-total::before { background-color: var(--accent); }
+    
+    .summary-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    
+    .summary-value {
+      font-family: var(--font-heading);
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    
+    .search-filter-box {
+      margin-bottom: 30px;
+    }
+    
+    .search-filter-input {
+      width: 100%;
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 12px 18px;
+      font-family: var(--font-body);
+      font-size: 1rem;
+      border-radius: var(--radius-sm);
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .search-filter-input:focus {
+      border-color: var(--border-focus);
+      box-shadow: var(--shadow-glow);
+    }
+    
+    .scrapers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    
+    .scraper-card {
+      background-color: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 20px;
+      box-shadow: var(--shadow-card);
+      transition: transform 0.2s ease, border-color 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 15px;
+      animation: fadeIn 0.4s ease forwards;
+    }
+    
+    .scraper-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--border-focus);
+    }
+    
+    .scraper-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    
+    .scraper-name {
+      font-family: var(--font-heading);
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    
+    .scraper-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 20px;
+      text-transform: uppercase;
+    }
+    
+    .scraper-badge.healthy {
+      background-color: rgba(16, 185, 129, 0.15);
+      color: var(--accent-green);
+    }
+    
+    .scraper-badge.unhealthy {
+      background-color: rgba(239, 68, 68, 0.15);
+      color: var(--accent-red);
+    }
+    
+    .scraper-badge.loading {
+      background-color: rgba(99, 102, 241, 0.15);
+      color: var(--accent);
+    }
+    
+    .scraper-details {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.88rem;
+    }
+    
+    .scraper-detail-row {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-secondary);
+    }
+    
+    .scraper-detail-val {
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+    
+    .scraper-error {
+      font-family: monospace;
+      font-size: 0.78rem;
+      background-color: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: 6px;
+      padding: 8px;
+      color: var(--accent-red);
+      word-break: break-all;
+      max-height: 80px;
+      overflow-y: auto;
+      margin-top: 5px;
+    }
+    
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 0;
+      gap: 20px;
+    }
+    
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 5px solid rgba(99, 102, 241, 0.25);
+      border-radius: 50%;
+      border-top-color: var(--accent);
+      animation: spin 1s infinite linear;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="status-container">
+    
+    <!-- Header -->
+    <div class="status-header-wrap">
+      <div class="status-title">
+        <h1>Monitor de Scrapers</h1>
+        <p class="description" style="color: var(--text-secondary); font-size: 0.95rem;">Integridade e performance em tempo real das revendas do AutoBusca</p>
+      </div>
+      <div class="status-actions">
+        <button id="theme-toggle" class="btn-action btn-secondary" aria-label="Alternar tema" style="padding: 10px; border-radius: 50%; width: 40px; height: 40px; justify-content: center;">🌓</button>
+        <a href="index.html" class="btn-action btn-secondary">← Voltar para Busca</a>
+        <button id="btn-test" class="btn-action">🔄 Testar Scrapers</button>
+      </div>
+    </div>
+    
+    <!-- Painel de Sumário -->
+    <div class="summary-grid" id="summary-panel" style="display: none;">
+      <div class="summary-card card-total">
+        <span class="summary-label">Total de Scrapers</span>
+        <span class="summary-value" id="summary-total">-</span>
+      </div>
+      <div class="summary-card card-healthy">
+        <span class="summary-label">Operacionais</span>
+        <span class="summary-value" style="color: var(--accent-green);" id="summary-healthy">-</span>
+      </div>
+      <div class="summary-card card-unhealthy">
+        <span class="summary-label">Com Falha</span>
+        <span class="summary-value" style="color: var(--accent-red);" id="summary-unhealthy">-</span>
+      </div>
+      <div class="summary-card card-duration">
+        <span class="summary-label">Tempo Total</span>
+        <span class="summary-value" id="summary-duration">-</span>
+      </div>
+    </div>
+    
+    <!-- Filtro de Busca -->
+    <div class="search-filter-box">
+      <input type="text" id="filter-input" class="search-filter-input" placeholder="Filtrar por nome da revenda...">
+    </div>
+    
+    <!-- Grid Principal / Lista de Scrapers -->
+    <div id="loading-view" class="loading-container">
+      <div class="spinner"></div>
+      <p style="color: var(--text-secondary); font-weight: 500;">Analisando saúde de todas as revendas...</p>
+    </div>
+    
+    <div class="scrapers-grid" id="scrapers-grid" style="display: none;">
+      <!-- Preenchido dinamicamente -->
+    </div>
+    
+  </div>
+
+  <script>
+    // Lógica do frontend
+    document.addEventListener("DOMContentLoaded", () => {
+      const btnTest = document.getElementById("btn-test");
+      const filterInput = document.getElementById("filter-input");
+      const loadingView = document.getElementById("loading-view");
+      const scrapersGrid = document.getElementById("scrapers-grid");
+      const summaryPanel = document.getElementById("summary-panel");
+      const themeToggle = document.getElementById("theme-toggle");
+      
+      let allScrapers = [];
+      
+      // Tema Dark/Light
+      themeToggle.addEventListener("click", () => {
+        const isDark = document.body.classList.contains("dark-theme") || !document.body.classList.contains("light-theme");
+        document.body.classList.remove("dark-theme", "light-theme");
+        const newTheme = isDark ? "light" : "dark";
+        document.body.classList.add(`${newTheme}-theme`);
+        localStorage.setItem("autobusca:theme", newTheme);
+      });
+      
+      // Carrega preferência de tema do localStorage
+      const savedTheme = localStorage.getItem("autobusca:theme") || "dark";
+      document.body.classList.add(`${savedTheme}-theme`);
+      
+      // Executa o teste de saúde inicial
+      runHealthCheck();
+      
+      btnTest.addEventListener("click", runHealthCheck);
+      filterInput.addEventListener("input", filterScrapers);
+      
+      async function runHealthCheck() {
+        btnTest.disabled = true;
+        btnTest.textContent = "🔄 Testando...";
+        loadingView.style.display = "flex";
+        scrapersGrid.style.display = "none";
+        summaryPanel.style.display = "none";
+        
+        try {
+          const res = await fetch("/api/scrapers-health");
+          if (!res.ok) throw new Error(`Status ${res.status}`);
+          const data = await res.json();
+          
+          allScrapers = data.scrapers || [];
+          renderSummary(data);
+          renderScrapers(allScrapers);
+          
+          loadingView.style.display = "none";
+          scrapersGrid.style.display = "grid";
+          summaryPanel.style.display = "grid";
+        } catch(err) {
+          console.error("Erro no teste de saúde:", err);
+          loadingView.innerHTML = `
+            <div style="font-size: 3rem;">⚠️</div>
+            <h3 style="margin-top: 10px;">Falha ao obter status</h3>
+            <p style="color: var(--text-secondary); max-width: 400px; text-align: center;">Não foi possível carregar a saúde dos scrapers. Verifique os logs do servidor.</p>
+            <button class="btn-action" onclick="window.location.reload()" style="margin-top: 15px;">Tentar Novamente</button>
+          `;
+        } finally {
+          btnTest.disabled = false;
+          btnTest.textContent = "🔄 Testar Scrapers";
+        }
+      }
+      
+      function renderSummary(data) {
+        document.getElementById("summary-total").textContent = data.total;
+        document.getElementById("summary-healthy").textContent = data.healthy;
+        document.getElementById("summary-unhealthy").textContent = data.unhealthy;
+        document.getElementById("summary-duration").textContent = data.duration;
+      }
+      
+      function renderScrapers(scrapers) {
+        scrapersGrid.innerHTML = "";
+        
+        if (scrapers.length === 0) {
+          scrapersGrid.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-secondary);">
+              Nenhum scraper corresponde ao filtro de busca.
+            </div>
+          `;
+          return;
+        }
+        
+        scrapers.forEach((s, index) => {
+          const card = document.createElement("div");
+          card.className = "scraper-card";
+          card.style.animationDelay = `${Math.min(index, 12) * 0.03}s`;
+          
+          const isHealthy = s.status === "healthy";
+          const statusBadge = `<span class="scraper-badge ${isHealthy ? 'healthy' : 'unhealthy'}">${isHealthy ? 'Operacional' : 'Erro'}</span>`;
+          
+          let errorHtml = "";
+          if (!isHealthy && s.error) {
+            errorHtml = `<div class="scraper-error" title="${escapeHtml(s.error)}">${escapeHtml(s.error)}</div>`;
+          }
+          
+          card.innerHTML = `
+            <div class="scraper-card-header">
+              <span class="scraper-name">${escapeHtml(s.name)}</span>
+              ${statusBadge}
+            </div>
+            
+            <div class="scraper-details">
+              <div class="scraper-detail-row">
+                <span>Tempo de resposta:</span>
+                <span class="scraper-detail-val">${escapeHtml(s.duration)}</span>
+              </div>
+              <div class="scraper-detail-row">
+                <span>Itens encontrados:</span>
+                <span class="scraper-detail-val">${s.count !== undefined ? s.count : '-'}</span>
+              </div>
+              ${errorHtml}
+            </div>
+          `;
+          
+          scrapersGrid.appendChild(card);
+        });
+      }
+      
+      function filterScrapers() {
+        const query = filterInput.value.toLowerCase().trim();
+        if (!query) {
+          renderScrapers(allScrapers);
+          return;
+        }
+        
+        const filtered = allScrapers.filter(s => 
+          s.name.toLowerCase().includes(query)
+        );
+        renderScrapers(filtered);
+      }
+      
+      function escapeHtml(str) {
+        if (typeof str !== "string") return String(str ?? "");
+        return str
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+    });
+  </script>
+
+  <!-- Registro do Service Worker para PWA -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('Service Worker registrado com sucesso:', reg.scope))
+          .catch(err => console.error('Erro ao registrar Service Worker:', err));
+      });
+    }
+  </script>
+</body>
+</html>

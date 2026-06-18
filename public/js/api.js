@@ -27,13 +27,11 @@ const Api = (() => {
    * }>}
    * @throws {Error} Se a requisição falhar ou a API retornar erro
    */
-  async function buscarCarros(query, urls = []) {
-    const response = await fetch(BASE_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ query, urls }),
+  async function buscarCarros(query, signal = null) {
+    const url = `${BASE_URL}?query=${encodeURIComponent(query)}`;
+    const response = await fetch(url, {
+      method: "GET",
+      signal,
     });
 
     // Se o servidor retornou um status de erro (4xx, 5xx), lança exceção
@@ -53,5 +51,52 @@ const Api = (() => {
     return data;
   }
 
-  return { buscarCarros };
+  /**
+   * Conecta ao endpoint de SSE para buscar carros via streaming.
+   *
+   * @param {string}   query - Termo de busca (ex: "HB20")
+   * @param {Object}   callbacks - Objeto contendo callbacks: onInit, onSiteResult, onDone, onError
+   * @returns {EventSource} - Referência do EventSource para poder cancelar/fechar se necessário
+   */
+  function buscarCarrosStream(query, { onInit, onSiteResult, onDone, onError }) {
+    const url = `/api/buscar-carros-stream?query=${encodeURIComponent(query)}`;
+    const eventSource = new EventSource(url);
+
+    eventSource.addEventListener("init", (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (onInit) onInit(data);
+      } catch (err) {
+        console.error("Erro no parse do evento 'init':", err);
+      }
+    });
+
+    eventSource.addEventListener("site-result", (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (onSiteResult) onSiteResult(data);
+      } catch (err) {
+        console.error("Erro no parse do evento 'site-result':", err);
+      }
+    });
+
+    eventSource.addEventListener("done", (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (onDone) onDone(data);
+      } catch (err) {
+        console.error("Erro no parse do evento 'done':", err);
+      }
+      eventSource.close();
+    });
+
+    eventSource.onerror = (err) => {
+      if (onError) onError(err);
+      eventSource.close();
+    };
+
+    return eventSource;
+  }
+
+  return { buscarCarros, buscarCarrosStream };
 })();

@@ -82,21 +82,71 @@ const UI = (() => {
       car.price.toLowerCase().includes("combinar")
     );
 
+    let comparisonHtml = "";
+    if (car.comparison) {
+      const isBelow = car.comparison.diff < 0;
+      const absDiff = Math.abs(car.comparison.diff);
+      const formattedDiff = new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+        maximumFractionDigits: 0
+      }).format(absDiff);
+      const percentStr = `${Math.abs(car.comparison.percent).toFixed(1)}%`;
+
+      comparisonHtml = `
+        <div class="fipe-card-badge ${isBelow ? 'below' : 'above'}" title="Preço em relação à tabela FIPE de referência">
+          ${isBelow ? '▼' : '▲'} ${formattedDiff} (${percentStr}) ${isBelow ? 'abaixo' : 'acima'} da FIPE
+        </div>
+      `;
+    }
+
+    let metaHtml = "";
+    if (car.year || car.km) {
+      metaHtml = `
+        <div class="car-meta">
+          ${car.year ? `<span class="meta-item" title="Ano do modelo"><span class="meta-icon">📅</span> ${escapeHtml(car.year)}</span>` : ""}
+          ${car.km ? `<span class="meta-item" title="Quilometragem"><span class="meta-icon">🛣️</span> ${escapeHtml(car.km)}</span>` : ""}
+        </div>
+      `;
+    }
+
+    let fipePriceParam = "";
+    if (car.comparison && car.price_value) {
+      const fipePriceVal = car.price_value - car.comparison.diff;
+      fipePriceParam = `&fipe_price=${fipePriceVal}`;
+    }
+
+    const detailsUrl = `detalhes.html?title=${encodeURIComponent(car.title)}` +
+      `&price=${encodeURIComponent(car.price || "")}` +
+      `&price_value=${car.price_value || ""}` +
+      `&img=${encodeURIComponent(car.image_url || "")}` +
+      `&url=${encodeURIComponent(car.url)}` +
+      `&dealer=${encodeURIComponent(car.dealer_name || "")}` +
+      `${car.year ? `&year=${encodeURIComponent(car.year)}` : ""}` +
+      `${car.km ? `&km=${encodeURIComponent(car.km)}` : ""}` +
+      fipePriceParam;
+
     card.innerHTML = `
       <div class="car-image-wrap">
-        <img
-          src="${escapeHtml(imgSrc)}"
-          alt="Foto de ${escapeHtml(car.title)}"
-          loading="lazy"
-          onerror="this.onerror=null; this.src='${PLACEHOLDER_IMG}';"
-        >
+        <a href="${detailsUrl}" aria-label="Ver detalhes de ${escapeHtml(car.title)}" class="car-card-link-wrapper">
+          <img
+            src="${escapeHtml(imgSrc)}"
+            alt="Foto de ${escapeHtml(car.title)}"
+            loading="lazy"
+            onerror="this.onerror=null; this.src='${PLACEHOLDER_IMG}';"
+          >
+        </a>
         <span class="dealer-badge">${escapeHtml(car.dealer_name || "Revenda")}</span>
       </div>
 
       <div class="car-body">
         <h3 class="car-title" title="${escapeHtml(car.title)}">
-          ${escapeHtml(car.title)}
+          <a href="${detailsUrl}" class="car-title-link">
+            ${escapeHtml(car.title)}
+          </a>
         </h3>
+        ${metaHtml}
+        ${comparisonHtml}
         <div class="car-footer">
           <span class="car-price ${isNoPrice ? "no-price" : ""}">
             ${escapeHtml(car.price || "Sob consulta")}
@@ -297,6 +347,39 @@ const UI = (() => {
       .replace(/'/g, "&#39;");
   }
 
+  /**
+   * Exibe o banner de comparação com o preço de referência da FIPE.
+   */
+  function showFipeCompareBanner(modelName, formattedPrice, onClear) {
+    const container = document.getElementById("fipe-compare-container");
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="fipe-compare-banner">
+        <div class="fipe-compare-info">
+          <span>⚖️</span>
+          Comparando com a Tabela FIPE: <strong>${escapeHtml(modelName)}</strong> (FIPE: <strong>${escapeHtml(formattedPrice)}</strong>)
+        </div>
+        <button class="btn-clear-compare" id="btn-clear-fipe-compare">Limpar Comparação</button>
+      </div>
+    `;
+
+    const btnClear = document.getElementById("btn-clear-fipe-compare");
+    if (btnClear && onClear) {
+      btnClear.addEventListener("click", onClear);
+    }
+  }
+
+  /**
+   * Remove o banner de comparação da tela.
+   */
+  function hideFipeCompareBanner() {
+    const container = document.getElementById("fipe-compare-container");
+    if (container) {
+      container.innerHTML = "";
+    }
+  }
+
   // Interface pública do módulo
   return {
     renderCars,
@@ -309,5 +392,7 @@ const UI = (() => {
     updateStoreBadge,
     showResultsControls,
     hideResultsControls,
+    showFipeCompareBanner,
+    hideFipeCompareBanner,
   };
 })();

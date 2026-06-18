@@ -24,7 +24,7 @@ function parsePrice(priceStr) {
   const lower = priceStr.toLowerCase().trim();
 
   // Preços que não são numéricos — tratamos como "sem preço definido"
-  const noPrice = ["sob consulta", "consulte", "a combinar", "combinar", "solicite", "0"];
+  const noPrice = ["sob consulta", "consulte", "a combinar", "combinar", "solicite"];
   if (noPrice.some((term) => lower.includes(term))) return null;
 
   // Remove "R$", espaços, pontos de milhar e converte vírgula decimal → ponto
