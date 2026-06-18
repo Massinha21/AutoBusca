@@ -9,6 +9,7 @@ const BASE_URL = "https://sandiegoveiculos.com.br";
 async function search(query, fetchHtml) {
   const html = await fetchHtml(`${BASE_URL}/estoque?nome=${encodeURIComponent(query)}`);
   const $    = cheerio.load(html);
+  const queryWords = query.toLowerCase().split(/\s+/);
   const results = [];
 
   $(".card-car").each((_, card) => {
@@ -26,6 +27,8 @@ async function search(query, fetchHtml) {
       let title = a.attr("title") || el.find(".car-description h2, .car-description h3").first().text();
       title = title.replace(/\s+/g, " ").trim();
       if (!title) title = "Veículo";
+
+      if (!queryWords.every(w => title.toLowerCase().includes(w))) return;
 
       // Imagem
       const img = el.find(".card-header img").first();
