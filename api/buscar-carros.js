@@ -1,4 +1,5 @@
 // api/buscar-carros.js
+// Production version v1.0.1
 //
 // Endpoint principal — Serverless Function da Vercel
 // Recebe: POST { query: string }

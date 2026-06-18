@@ -1,8 +1,0 @@
-# Este arquivo garante que a pasta /api/parsers/ seja rastreada pelo Git.
-# Na Fase 2, cada site de revenda terá um arquivo parser aqui.
-#
-# Estrutura esperada na Fase 2+:
-#   api/parsers/amfveiculos.js
-#   api/parsers/savinhomotors.js
-#   api/parsers/ramiroveiculos.js
-#   ... etc
