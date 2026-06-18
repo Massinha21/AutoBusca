@@ -1,0 +1,72 @@
+// api/_scrapers/cristalveiculos.js
+// Cristal Veículos — GET /veiculos.php (estoque completo, filtro local)
+// Plataforma CarroBrasil
+
+const cheerio = require("cheerio");
+const NAME     = "Cristal Veículos";
+const BASE_URL = "http://www.cristalveiculosrp.com.br";
+
+async function search(query, fetchHtml) {
+  const html = await fetchHtml(`${BASE_URL}/veiculos.php`);
+  const $    = cheerio.load(html);
+  const queryWords = query.toLowerCase().split(/\s+/);
+  const results = [];
+
+  // Cada card de veículo está em um link de detalhe detalhe.php?id=...
+  $("a[href^='detalhe.php?id=']").each((_, aEl) => {
+    try {
+      const a = $(aEl);
+      let text = a.text().trim().replace(/\s+/g, " ");
+      if (!text) {
+        // Se for um link de imagem vazio, tenta pegar o texto do link irmão ou do container
+        text = a.parent().text().trim().replace(/\s+/g, " ");
+      }
+      if (!text) return;
+
+      // Filtra pela busca
+      if (!queryWords.every(w => text.toLowerCase().includes(w))) return;
+
+      // Link
+      let link = a.attr("href");
+      if (!link.startsWith("http")) link = `${BASE_URL}/${link.replace(/^\//, "")}`;
+
+      // Imagem (pode estar dentro do link ou em tags irmãs)
+      let image_url = null;
+      const img = a.find("img").first();
+      let src = img.length ? img.attr("src") : null;
+      if (!src) {
+        // Tenta achar imagem próxima no mesmo container
+        const parent = a.parent();
+        const siblingImg = parent.find("img").first();
+        src = siblingImg.length ? siblingImg.attr("src") : null;
+      }
+      if (src) {
+        // Trata URL do CarroBrasil: //www.carrobrasil.com.br/img-SF.php?img=https://...
+        if (src.startsWith("//")) src = "https:" + src;
+        const m = src.match(/img=(https:\/\/.*)/);
+        image_url = m ? m[1] : src;
+      }
+
+      // Separa preço e título
+      let price = "Sob consulta";
+      const priceMatch = text.match(/R\$\s*[\d\.\,]+/i);
+      if (priceMatch) {
+        price = priceMatch[0];
+      }
+      
+      // Limpa título tirando o preço e termos repetidos
+      let title = text.replace(/R\$\s*[\d\.\,]+/gi, "").trim();
+      title = title.replace(/\s+/g, " ");
+      if (!title) title = "Veículo";
+
+      // Evita duplicados (como temos links de imagem e texto separados para o mesmo carro)
+      if (results.some(r => r.url === link)) return;
+
+      results.push({ title, price, image_url, url: link, dealer_name: NAME });
+    } catch (_) {}
+  });
+
+  return results;
+}
+
+module.exports = { search, name: NAME };

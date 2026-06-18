@@ -37,6 +37,16 @@ const Storage = (() => {
     "https://tcamotors.com.br",
     "https://www.holfautos.com",
     "https://www.mmveiculosrp.com.br",
+    // 9 Novas URLs Cadastradas
+    "https://kitoveiculos.com.br",
+    "https://www.bolsadeveiculo.com.br",
+    "http://www.cemveiculos.com.br",
+    "http://www.cristalveiculosrp.com.br",
+    "https://sandiegoveiculos.com.br",
+    "https://hiperauto.com.br",
+    "https://tharleyveiculos.com.br",
+    "https://mixveiculosribeirao.com.br",
+    "https://lexcarmultimarcas.com.br",
   ];
 
   /**
