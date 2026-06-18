@@ -1,6 +1,10 @@
-// api/parsers/tcamotors.js
+// api/_scrapers/tcamotors.js
 // TCA Motors — GET /estoque (lista completa, filtro local)
-// Plataforma Exibição — compartilha a mesma estrutura de plataforma da Auto Prime RP
+// Plataforma Exibição
+//
+// CORREÇÃO: iteramos por li.li-desc-estoque e pegamos o parent("ul") de cada um.
+// O seletor anterior $("ul") capturava ul ancestrais que englobavam TODOS os
+// anúncios de uma vez, causando título concatenado e preços duplicados.
 
 const cheerio = require("cheerio");
 const NAME     = "TCA Motors";
@@ -8,40 +12,51 @@ const BASE_URL = "https://tcamotors.com.br";
 
 async function search(query, fetchHtml) {
   const html = await fetchHtml(`${BASE_URL}/estoque`);
-  const $ = cheerio.load(html);
+  const $    = cheerio.load(html);
   const queryWords = query.toLowerCase().split(/\s+/);
   const results = [];
 
-  $("ul").each((_, ul) => {
+  // Cada li.li-desc-estoque corresponde a UM anúncio; pegamos seu ul pai direto.
+  $("li.li-desc-estoque").each((_, descLiEl) => {
     try {
-      const el     = $(ul);
-      const fotoLi = el.find("li.li-foto-estoque");
-      const descLi = el.find("li.li-desc-estoque");
-      if (!fotoLi.length || !descLi.length) return;
+      const descLi = $(descLiEl);
+      const parentUl = descLi.parent("ul");
+      if (!parentUl.length) return;
 
-      let link = el.find("a[href]").first().attr("href") || null;
+      // Título do anúncio
+      const title = descLi.find("span.tx-titulo-estoque").first()
+        .text().trim().replace(/\s+/g, " ");
+      if (!title || title.toLowerCase() === "veículo") return;
+      if (!queryWords.every(w => title.toLowerCase().includes(w))) return;
+
+      // Link — procura no ul pai; o href deve conter "exibicao"
+      let link = parentUl.find("a[href]").first().attr("href") || null;
       if (!link || !link.includes("exibicao")) return;
       if (!link.startsWith("http")) link = `${BASE_URL}/${link.replace(/^\//, "")}`;
 
-      const titleSpan = descLi.find("span.tx-titulo-estoque");
-      let title = titleSpan.text().trim().replace(/\s+/g, " ") || "Veículo";
-      if (!queryWords.every(w => title.toLowerCase().includes(w))) return;
-
+      // Imagem — está na li.li-foto-estoque irmã, no mesmo ul pai
       let image_url = null;
-      const style = fotoLi.attr("style") || "";
-      const bgm = style.match(/url\(['"]?(.*?)['"]?\)/);
-      if (bgm) {
-        image_url = bgm[1];
-        if (!image_url.startsWith("http")) image_url = `${BASE_URL}/${image_url.replace(/^\//, "")}`;
+      const fotoLi = parentUl.find("li.li-foto-estoque");
+      if (fotoLi.length) {
+        const style = fotoLi.attr("style") || "";
+        const bgm   = style.match(/url\(['"']?(.*?)['"']?\)/);
+        if (bgm) {
+          image_url = bgm[1];
+          if (!image_url.startsWith("http"))
+            image_url = `${BASE_URL}/${image_url.replace(/^\//, "")}`;
+        }
       }
 
-      let price = descLi.find("span.tx-preco").text().trim() || "Sob consulta";
+      // Preço — apenas o PRIMEIRO span.tx-preco dentro do descLi
+      let price = descLi.find("span.tx-preco").first().text().trim() || "Sob consulta";
       const clean = price.replace(/R\$|\s|\,00|\.00/g, "");
       if (!clean || clean === "0") price = "Sob consulta";
 
       results.push({ title, price, image_url, url: link, dealer_name: NAME });
     } catch (_) {}
   });
+
   return results;
 }
+
 module.exports = { search, name: NAME };
