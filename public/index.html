@@ -72,6 +72,10 @@
             aria-label="Termo de busca"
             required
           >
+          <button type="button" id="upload-img-btn" class="upload-img-btn" title="Buscar por imagem (foto)">
+            📷
+          </button>
+          <input type="file" id="image-upload-input" accept="image/*" style="display: none;">
           <button type="submit" id="search-btn" aria-label="Buscar veículos">
             Buscar
           </button>
@@ -198,6 +202,14 @@
       });
     }
   </script>
+
+  <!-- Overlay de Carregamento da Análise de Imagem (IA) -->
+  <div id="image-analysis-overlay" class="image-analysis-overlay hidden">
+    <div class="analysis-spinner-box">
+      <div class="spinner"></div>
+      <p>Analisando imagem com IA...</p>
+    </div>
+  </div>
 
 </body>
 </html>

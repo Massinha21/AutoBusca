@@ -26,6 +26,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const searchForm     = document.getElementById("search-form");
   const searchInput    = document.getElementById("search-input");
   const searchBtn      = document.getElementById("search-btn");
+  const uploadImgBtn   = document.getElementById("upload-img-btn");
+  const imageUploadInput = document.getElementById("image-upload-input");
+  const imageAnalysisOverlay = document.getElementById("image-analysis-overlay");
   const themeToggle    = document.getElementById("theme-toggle");
   const urlsPanel      = document.getElementById("urls-panel");
   const urlsPanelToggle= document.getElementById("urls-panel-toggle");
@@ -81,6 +84,12 @@ document.addEventListener("DOMContentLoaded", () => {
   function bindEvents() {
     // Formulário de busca
     searchForm.addEventListener("submit", handleSearchSubmit);
+
+    // Busca por imagem
+    if (uploadImgBtn && imageUploadInput) {
+      uploadImgBtn.addEventListener("click", () => imageUploadInput.click());
+      imageUploadInput.addEventListener("change", handleImageUploadChange);
+    }
 
     // Alternância de tema
     themeToggle.addEventListener("click", handleThemeToggle);
@@ -144,6 +153,83 @@ document.addEventListener("DOMContentLoaded", () => {
     const urls = Storage.parseUrlText(urlsText);
 
     await runSearch(query, urls);
+  }
+
+  /**
+   * Trata a seleção de arquivo de imagem para busca.
+   */
+  function handleImageUploadChange(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Garante que é uma imagem
+    if (!file.type.startsWith("image/")) {
+      alert("Por favor, selecione um arquivo de imagem válido.");
+      imageUploadInput.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64Data = event.target.result.split(",")[1];
+      const mimeType = file.type;
+
+      // Exibe overlay de análise de imagem
+      if (imageAnalysisOverlay) {
+        imageAnalysisOverlay.classList.remove("hidden");
+      }
+
+      try {
+        const res = await fetch("/api/buscar-imagem", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            image: base64Data,
+            mimeType: mimeType
+          })
+        });
+
+        if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.error || `Erro de rede ${res.status}`);
+        }
+
+        const data = await res.json();
+        
+        // Sucesso! Esconde overlay, preenche campo de busca e envia o formulário
+        if (imageAnalysisOverlay) {
+          imageAnalysisOverlay.classList.add("hidden");
+        }
+
+        if (data.query) {
+          searchInput.value = data.query;
+          // Dispara busca
+          searchForm.dispatchEvent(new Event("submit"));
+        } else {
+          throw new Error("Modelo não identificado pela IA.");
+        }
+
+      } catch (err) {
+        console.error("Erro ao analisar imagem:", err);
+        alert(`Erro ao analisar imagem: ${err.message}`);
+        if (imageAnalysisOverlay) {
+          imageAnalysisOverlay.classList.add("hidden");
+        }
+      } finally {
+        // Limpa o input para permitir re-upload do mesmo arquivo
+        imageUploadInput.value = "";
+      }
+    };
+
+    reader.onerror = (err) => {
+      console.error("Erro ao ler arquivo:", err);
+      alert("Erro ao ler o arquivo de imagem.");
+      imageUploadInput.value = "";
+    };
+
+    reader.readAsDataURL(file);
   }
 
   async function runSearch(query, urls) {
