@@ -12,22 +12,22 @@ const { normalizePrice } = require("./lib/price-utils");
 
 // ── Parsers reais (um arquivo por site de revenda) ────────────────────────
 const PARSERS = [
-  require("./parsers/zmveiculos"),
-  require("./parsers/amfveiculos"),
-  require("./parsers/savinhomotors"),
-  require("./parsers/ramiroveiculos"),
-  require("./parsers/glveiculos"),
-  require("./parsers/autoprimerp"),
-  require("./parsers/krveiculos"),
-  require("./parsers/baseveiculos"),
-  require("./parsers/mmveiculos"),
-  require("./parsers/valvechveiculos"),
-  require("./parsers/copaveiculos"),
-  require("./parsers/automaisveiculos"),
-  require("./parsers/rossiveiculos"),
-  require("./parsers/seminovosribeirao"),
-  require("./parsers/tcamotors"),
-  require("./parsers/holfautos"),
+  require("./scrapers/zmveiculos"),
+  require("./scrapers/amfveiculos"),
+  require("./scrapers/savinhomotors"),
+  require("./scrapers/ramiroveiculos"),
+  require("./scrapers/glveiculos"),
+  require("./scrapers/autoprimerp"),
+  require("./scrapers/krveiculos"),
+  require("./scrapers/baseveiculos"),
+  require("./scrapers/mmveiculos"),
+  require("./scrapers/valvechveiculos"),
+  require("./scrapers/copaveiculos"),
+  require("./scrapers/automaisveiculos"),
+  require("./scrapers/rossiveiculos"),
+  require("./scrapers/seminovosribeirao"),
+  require("./scrapers/tcamotors"),
+  require("./scrapers/holfautos"),
 ];
 
 // Headers para imitar um navegador e evitar bloqueios simples

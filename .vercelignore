@@ -1,6 +1,8 @@
 # Ignore Python files and local development scripts on Vercel deployment
-# NOTA: removemos a regra "parsers/" pois ela excluia api/parsers/ tambem.
-# A regra *.py abaixo ja cuida de excluir todos os arquivos Python.
+# Ignoramos as pastas da raiz de forma ancorada (/parsers/, /templates/, /static/) para evitar conflitos de build
+/parsers/
+/templates/
+/static/
 app.py
 parsers_manager.py
 venv/
