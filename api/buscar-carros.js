@@ -1,48 +1,137 @@
-// api/buscar-carros.js — versão de diagnóstico
-// Verifica se cheerio e todos os parsers carregam corretamente
+// api/buscar-carros.js
+//
+// Endpoint principal — Serverless Function da Vercel
+// Recebe: POST { query: string }
+// Retorna: { query, total, sites, results }
+//
+// Busca em TODOS os parsers cadastrados em paralelo (Promise.allSettled).
+// Se um site falhar, os outros continuam normalmente.
 
+const { normalizePrice } = require("./lib/price-utils");
+
+// ── Parsers reais (um arquivo por site de revenda) ────────────────────────
+// NOTA: pasta renomeada de api/parsers/ → api/lojas/ para evitar conflito
+// com .vercelignore que ignorava qualquer pasta chamada "parsers/"
+const PARSERS = [
+  require("./lojas/zmveiculos"),
+  require("./lojas/amfveiculos"),
+  require("./lojas/savinhomotors"),
+  require("./lojas/ramiroveiculos"),
+  require("./lojas/glveiculos"),
+  require("./lojas/autoprimerp"),
+  require("./lojas/krveiculos"),
+  require("./lojas/baseveiculos"),
+  require("./lojas/mmveiculos"),
+  require("./lojas/valvechveiculos"),
+  require("./lojas/copaveiculos"),
+  require("./lojas/automaisveiculos"),
+  require("./lojas/rossiveiculos"),
+  require("./lojas/seminovosribeirao"),
+  require("./lojas/tcamotors"),
+  require("./lojas/holfautos"),
+];
+
+// Headers para imitar um navegador e evitar bloqueios simples
+const BROWSER_HEADERS = {
+  "User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8",
+};
+
+const TIMEOUT_MS = 8000; // 8 segundos por site para evitar timeout da Vercel (10s)
+
+// ── Handler principal ─────────────────────────────────────────────────────
 module.exports = async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Origin",  "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
+  if (req.method !== "POST")    return res.status(405).json({ error: "Use POST." });
 
-  const errors = [];
-  const loaded = [];
-
-  // Testa cheerio
-  try {
-    require("cheerio");
-    loaded.push("cheerio OK");
-  } catch (e) {
-    errors.push("cheerio: " + e.message);
+  const { query } = req.body || {};
+  if (!query || !query.trim()) {
+    return res.status(400).json({ error: "Campo 'query' obrigatório." });
   }
 
-  // Testa price-utils
-  try {
-    require("./lib/price-utils");
-    loaded.push("price-utils OK");
-  } catch (e) {
-    errors.push("price-utils: " + e.message);
-  }
+  const term = query.trim();
 
-  // Testa cada parser individualmente
-  const parserNames = [
-    "zmveiculos", "amfveiculos", "savinhomotors", "ramiroveiculos",
-    "glveiculos", "autoprimerp", "krveiculos", "baseveiculos",
-    "mmveiculos", "valvechveiculos", "copaveiculos", "automaisveiculos",
-    "rossiveiculos", "seminovosribeirao", "tcamotors", "holfautos"
-  ];
+  // Busca em todos os parsers em paralelo — falhas individuais não derrubam o resto
+  const settled = await Promise.allSettled(
+    PARSERS.map(parser =>
+      withTimeout(
+        parser.search(term, fetchHtml),
+        TIMEOUT_MS,
+        parser.name
+      )
+    )
+  );
 
-  for (const name of parserNames) {
-    try {
-      require("./parsers/" + name);
-      loaded.push(name + " OK");
-    } catch (e) {
-      errors.push(name + ": " + e.message);
+  // Agrega resultados e estatísticas por loja
+  const allResults = [];
+  const sites      = [];
+
+  settled.forEach((outcome, i) => {
+    const parser = PARSERS[i];
+
+    if (outcome.status === "fulfilled") {
+      const cars = (outcome.value || []).map(car => {
+        const { display, value } = normalizePrice(car.price);
+        return { ...car, price: display, price_value: value };
+      });
+
+      sites.push({ name: parser.name, status: "success", count: cars.length });
+      allResults.push(...cars);
+    } else {
+      console.error(`[${parser.name}] Erro:`, outcome.reason?.message || outcome.reason);
+      sites.push({
+        name:   parser.name,
+        status: "error",
+        count:  0,
+        error:  String(outcome.reason?.message || "Falha desconhecida").slice(0, 120),
+      });
     }
-  }
+  });
 
-  return res.status(200).json({ loaded, errors });
+  return res.status(200).json({
+    query: term,
+    total: allResults.length,
+    sites,
+    results: allResults,
+  });
 };
+
+// ── Utilitários ───────────────────────────────────────────────────────────
+
+/**
+ * Faz um GET HTTP e retorna o corpo como texto.
+ * Usado pelos parsers para buscar o HTML dos sites.
+ */
+async function fetchHtml(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  try {
+    const res = await fetch(url, {
+      headers: BROWSER_HEADERS,
+      signal:  controller.signal,
+      redirect: "follow",
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status} em ${url}`);
+    return await res.text();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Envolve uma Promise com um timeout.
+ * Se demorar mais que maxMs, rejeita com erro de timeout.
+ */
+function withTimeout(promise, maxMs, label) {
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error(`Timeout (${maxMs}ms) em ${label}`)), maxMs)
+  );
+  return Promise.race([promise, timeout]);
+}
