@@ -278,5 +278,33 @@
     </div>
   </div>
 
+  <!-- Barra Flutuante de Seleção de Comparação -->
+  <div id="compare-floating-bar" class="compare-floating-bar hidden" aria-live="polite">
+    <div class="compare-bar-content">
+      <span class="compare-count-text">Comparar: <strong id="compare-bar-count">0/3</strong> selecionados</span>
+      <div class="compare-bar-actions">
+        <button type="button" id="btn-compare-now" class="btn-compare-now" disabled>Comparar Agora</button>
+        <button type="button" id="btn-clear-compare-selection" class="btn-compare-clear">Limpar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Comparação Lado a Lado -->
+  <div id="compare-modal" class="compare-modal hidden" role="dialog" aria-modal="true" aria-labelledby="compare-modal-title">
+    <div class="compare-modal-box">
+      <div class="compare-modal-header">
+        <h2 id="compare-modal-title">Comparação de Veículos</h2>
+        <button type="button" id="btn-close-compare-modal" class="btn-close-compare" aria-label="Fechar comparação">✕</button>
+      </div>
+      <div class="compare-modal-body">
+        <div class="compare-table-wrapper">
+          <table class="compare-table" id="compare-table">
+            <!-- Gerada dinamicamente pelo JS -->
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

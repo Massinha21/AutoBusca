@@ -20,6 +20,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let activeEventSource = null; // Instância de EventSource ativa para streaming
   let fipePriceRef = null; // Preço FIPE de referência para comparação
   let fipeModelRef = null; // Nome do modelo FIPE de referência
+  let activeCompareCars = []; // Veículos selecionados para comparação
+  let activeCompareUrls = new Set(); // URLs dos veículos selecionados para comparação
 
 
   // ── Elementos do DOM ───────────────────────────────────────────────────
@@ -52,6 +54,15 @@ document.addEventListener("DOMContentLoaded", () => {
   const filterKmRange = document.getElementById("filter-km-range");
   const kmFilterValue = document.getElementById("km-filter-value");
   const btnClearFilters = document.getElementById("btn-clear-filters");
+
+  // Elementos do Modo Comparação
+  const compareFloatingBar = document.getElementById("compare-floating-bar");
+  const compareBarCount = document.getElementById("compare-bar-count");
+  const btnCompareNow = document.getElementById("btn-compare-now");
+  const btnClearCompareSelection = document.getElementById("btn-clear-compare-selection");
+  const compareModal = document.getElementById("compare-modal");
+  const compareTable = document.getElementById("compare-table");
+  const btnCloseCompareModal = document.getElementById("btn-close-compare-modal");
 
   // ══════════════════════════════════════════════════════════════════════
   // INICIALIZAÇÃO
@@ -132,7 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (allCars.length > 0) {
         const enriched = enrichCarsWithFipe(allCars);
         const sorted = sortCars(enriched, sortSelect.value);
-        UI.renderCars(sorted);
+        UI.renderCars(sorted, activeCompareUrls);
       }
     });
 
@@ -140,6 +151,28 @@ document.addEventListener("DOMContentLoaded", () => {
     btnExportCsv.addEventListener("click", () => {
       if (allCars.length > 0) exportToCsv(allCars);
     });
+
+    // Lógica do Modo Comparação Lado a Lado
+    const resultsGrid = document.getElementById("results-grid");
+    if (resultsGrid) {
+      resultsGrid.addEventListener("change", handleCompareCheckboxChange);
+    }
+    if (btnCompareNow) {
+      btnCompareNow.addEventListener("click", openCompareModal);
+    }
+    if (btnClearCompareSelection) {
+      btnClearCompareSelection.addEventListener("click", clearCompareSelection);
+    }
+    if (btnCloseCompareModal) {
+      btnCloseCompareModal.addEventListener("click", closeCompareModal);
+    }
+    if (compareModal) {
+      compareModal.addEventListener("click", (e) => {
+        if (e.target === compareModal) {
+          closeCompareModal();
+        }
+      });
+    }
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -262,6 +295,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnToggleFilters) btnToggleFilters.classList.add("hidden");
 
     allCars = [];
+    clearCompareSelection();
     const controller = new AbortController();
     let gotCache = false;
 
@@ -326,7 +360,7 @@ document.addEventListener("DOMContentLoaded", () => {
           allCars = allCars.concat(data.results);
           const enriched = enrichCarsWithFipe(allCars);
           const sorted = sortCars(enriched, sortSelect.value);
-          UI.renderCars(sorted);
+          UI.renderCars(sorted, activeCompareUrls);
           UI.showResultsControls(allCars.length);
         }
       },
@@ -370,7 +404,7 @@ document.addEventListener("DOMContentLoaded", () => {
       resetFiltersUI();
       const enriched = enrichCarsWithFipe(cars);
       const sorted = sortCars(enriched, sortSelect.value);
-      UI.renderCars(sorted);
+      UI.renderCars(sorted, activeCompareUrls);
       UI.showResultsControls(cars.length);
     }
   }
@@ -622,7 +656,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (allCars.length > 0) {
       const enriched = enrichCarsWithFipe(allCars);
       const sorted = sortCars(enriched, sortSelect.value);
-      UI.renderCars(sorted);
+      UI.renderCars(sorted, activeCompareUrls);
     }
   }
 
@@ -817,7 +851,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (sorted.length === 0) {
       UI.renderNoResultsFiltered();
     } else {
-      UI.renderCars(sorted);
+      UI.renderCars(sorted, activeCompareUrls);
     }
     
     UI.updateResultsCount(sorted.length);
@@ -857,6 +891,177 @@ document.addEventListener("DOMContentLoaded", () => {
     if (filterYearMin) {
       filterYearMin.value = "all";
     }
+  }
+
+  // ── Funções do Modo Comparação Lado a Lado ──────────────────────────
+  function handleCompareCheckboxChange(e) {
+    if (!e.target.classList.contains("compare-checkbox")) return;
+
+    const url = e.target.getAttribute("data-car-url");
+    if (!url) return;
+
+    if (e.target.checked) {
+      if (activeCompareCars.length >= 3) {
+        alert("Você pode selecionar no máximo 3 veículos para comparação.");
+        e.target.checked = false;
+        return;
+      }
+      
+      const car = allCars.find(c => c.url === url);
+      if (car) {
+        const enrichedList = enrichCarsWithFipe([car]);
+        activeCompareCars.push(enrichedList[0]);
+        activeCompareUrls.add(url);
+      }
+    } else {
+      activeCompareCars = activeCompareCars.filter(c => c.url !== url);
+      activeCompareUrls.delete(url);
+    }
+
+    updateCompareFloatingBar();
+  }
+
+  function updateCompareFloatingBar() {
+    if (!compareFloatingBar || !compareBarCount || !btnCompareNow) return;
+
+    const count = activeCompareCars.length;
+    compareBarCount.textContent = `${count}/3`;
+
+    if (count > 0) {
+      compareFloatingBar.classList.remove("hidden");
+    } else {
+      compareFloatingBar.classList.add("hidden");
+    }
+
+    if (count >= 2) {
+      btnCompareNow.disabled = false;
+    } else {
+      btnCompareNow.disabled = true;
+    }
+  }
+
+  function clearCompareSelection() {
+    activeCompareCars = [];
+    activeCompareUrls.clear();
+    updateCompareFloatingBar();
+    
+    const checkboxes = document.querySelectorAll(".compare-checkbox");
+    checkboxes.forEach(cb => {
+      cb.checked = false;
+    });
+  }
+
+  function openCompareModal() {
+    if (!compareModal || !compareTable) return;
+    
+    compareTable.innerHTML = generateCompareTableHtml();
+    compareModal.classList.remove("hidden");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeCompareModal() {
+    if (!compareModal) return;
+    compareModal.classList.add("hidden");
+    document.body.style.overflow = "";
+  }
+
+  function generateCompareTableHtml() {
+    if (activeCompareCars.length === 0) return "";
+
+    const rows = [
+      { label: "Foto", field: "image" },
+      { label: "Modelo", field: "title" },
+      { label: "Preço", field: "price" },
+      { label: "Revenda", field: "dealer" },
+      { label: "Ano", field: "year" },
+      { label: "Quilometragem", field: "km" },
+      { label: "Ações", field: "actions" }
+    ];
+
+    let html = "";
+
+    rows.forEach(row => {
+      html += `<tr>`;
+      html += `<th>${row.label}</th>`;
+
+      activeCompareCars.forEach(car => {
+        html += `<td>`;
+        if (row.field === "image") {
+          const fallbackImg = `data:image/svg+xml,${encodeURIComponent(`
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200">
+              <rect width="300" height="200" fill="#1e2a40"/>
+              <text x="150" y="85"  text-anchor="middle" fill="#4a5568" font-family="sans-serif" font-size="42">🚗</text>
+              <text x="150" y="125" text-anchor="middle" fill="#4a5568" font-family="sans-serif" font-size="14">Sem foto disponível</text>
+            </svg>
+          `)}`;
+          const imgSrc = car.image_url && car.image_url.startsWith("http") ? car.image_url : fallbackImg;
+          html += `<img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(car.title)}" class="compare-td-img" onerror="this.onerror=null; this.src='${fallbackImg}';">`;
+        } else if (row.field === "title") {
+          html += `<div class="compare-td-title">${escapeHtml(car.title)}</div>`;
+        } else if (row.field === "price") {
+          let priceHtml = `<div class="compare-td-price">${escapeHtml(car.price || "Sob consulta")}</div>`;
+          if (car.comparison) {
+            const isBelow = car.comparison.diff < 0;
+            const absDiff = Math.abs(car.comparison.diff);
+            const formattedDiff = new Intl.NumberFormat("pt-BR", {
+              style: "currency",
+              currency: "BRL",
+              maximumFractionDigits: 0
+            }).format(absDiff);
+            const percentStr = `${Math.abs(car.comparison.percent).toFixed(1)}%`;
+            priceHtml += `
+              <div class="fipe-card-badge ${isBelow ? 'below' : 'above'}" style="margin: 4px auto 0; font-size: 0.7rem; width: fit-content;" title="Preço em relação à tabela FIPE de referência">
+                ${isBelow ? '▼' : '▲'} ${formattedDiff} (${percentStr})
+              </div>
+            `;
+          }
+          html += priceHtml;
+        } else if (row.field === "dealer") {
+          html += `<div class="compare-td-dealer">${escapeHtml(car.dealer_name || "Revenda")}</div>`;
+        } else if (row.field === "year") {
+          html += `<div>${escapeHtml(car.year || "Não informado")}</div>`;
+        } else if (row.field === "km") {
+          html += `<div>${escapeHtml(car.km || "Não informado")}</div>`;
+        } else if (row.field === "actions") {
+          let fipePriceParam = "";
+          if (car.comparison && car.price_value) {
+            const fipePriceVal = car.price_value - car.comparison.diff;
+            fipePriceParam = `&fipe_price=${fipePriceVal}`;
+          }
+          const detailsUrl = `detalhes.html?title=${encodeURIComponent(car.title)}` +
+            `&price=${encodeURIComponent(car.price || "")}` +
+            `&price_value=${car.price_value || ""}` +
+            `&img=${encodeURIComponent(car.image_url || "")}` +
+            `&url=${encodeURIComponent(car.url)}` +
+            `&dealer=${encodeURIComponent(car.dealer_name || "")}` +
+            `${car.year ? `&year=${encodeURIComponent(car.year)}` : ""}` +
+            `${car.km ? `&km=${encodeURIComponent(car.km)}` : ""}` +
+            fipePriceParam;
+
+          html += `
+            <div class="compare-td-actions">
+              <a href="${detailsUrl}" class="btn-compare-action-view">Ver Detalhes</a>
+              <a href="${escapeHtml(car.url)}" target="_blank" rel="noopener noreferrer" class="btn-compare-action-orig">Ver Original</a>
+            </div>
+          `;
+        }
+        html += `</td>`;
+      });
+
+      html += `</tr>`;
+    });
+
+    return html;
+  }
+
+  function escapeHtml(str) {
+    if (typeof str !== "string") return String(str ?? "");
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
   // ── Inicializa tudo ao carregar ─────────────────────────────────────

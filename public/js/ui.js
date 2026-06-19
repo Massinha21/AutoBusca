@@ -43,7 +43,14 @@ const UI = (() => {
    *
    * @param {Array} cars - Array de objetos de carro
    */
-  function renderCars(cars) {
+  /**
+   * Renderiza a lista completa de carros no grid.
+   * Substitui todo o conteúdo atual do grid.
+   *
+   * @param {Array} cars - Array de objetos de carro
+   * @param {Set} activeCompareUrls - Set contendo as URLs dos carros selecionados para comparação
+   */
+  function renderCars(cars, activeCompareUrls = new Set()) {
     const grid = els.resultsGrid();
     grid.innerHTML = "";
 
@@ -53,7 +60,7 @@ const UI = (() => {
     }
 
     cars.forEach((car, index) => {
-      const card = createCarCard(car, index);
+      const card = createCarCard(car, index, activeCompareUrls);
       grid.appendChild(card);
     });
   }
@@ -63,9 +70,10 @@ const UI = (() => {
    *
    * @param {Object} car   - Dados do carro { title, price, image_url, url, dealer_name }
    * @param {number} index - Índice para animação escalonada
+   * @param {Set} activeCompareUrls - Set de URLs selecionadas
    * @returns {HTMLElement}
    */
-  function createCarCard(car, index) {
+  function createCarCard(car, index, activeCompareUrls = new Set()) {
     const card = document.createElement("article");
     card.className = "car-card";
     card.setAttribute("aria-label", `${car.title} - ${car.price}`);
@@ -126,8 +134,14 @@ const UI = (() => {
       `${car.km ? `&km=${encodeURIComponent(car.km)}` : ""}` +
       fipePriceParam;
 
+    const isCompared = activeCompareUrls.has(car.url);
+
     card.innerHTML = `
       <div class="car-image-wrap">
+        <label class="car-compare-label" title="Selecionar para comparação">
+          <input type="checkbox" class="compare-checkbox" data-car-url="${escapeHtml(car.url)}" ${isCompared ? 'checked' : ''}>
+          <span>Comparar</span>
+        </label>
         <a href="${detailsUrl}" aria-label="Ver detalhes de ${escapeHtml(car.title)}" class="car-card-link-wrapper">
           <img
             src="${escapeHtml(imgSrc)}"
