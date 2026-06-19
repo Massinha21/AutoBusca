@@ -23,6 +23,15 @@ document.addEventListener("DOMContentLoaded", () => {
   let activeCompareCars = []; // Veículos selecionados para comparação
   let activeCompareUrls = new Set(); // URLs dos veículos selecionados para comparação
 
+  // ── Estado global da Fase 2 (Supabase) ──────────────────────────────────
+  let currentTab = "search"; // "search" ou "inventory"
+  let currentUser = null; // Informações do usuário logado
+  let inventoryPage = 0;
+  let inventoryTotal = 0;
+  let inventoryHasMore = true;
+  let isLoadingInventory = false;
+  const inventoryLimit = 24;
+
 
   // ── Elementos do DOM ───────────────────────────────────────────────────
   const searchForm     = document.getElementById("search-form");
@@ -74,6 +83,47 @@ document.addEventListener("DOMContentLoaded", () => {
   const mapPanel = document.getElementById("map-panel");
   const mapPanelToggle = document.getElementById("map-panel-toggle");
 
+  // Elementos do Grupo 4 (Supabase)
+  const navBtnSearch = document.getElementById("nav-btn-search");
+  const navBtnInventory = document.getElementById("nav-btn-inventory");
+  const authMenuWrapper = document.getElementById("auth-menu-wrapper");
+  const btnLoginTrigger = document.getElementById("btn-login-trigger");
+  const userDropdown = document.getElementById("user-dropdown");
+  const userEmailDisplay = document.getElementById("user-email-display");
+  const btnShowAlerts = document.getElementById("btn-show-alerts");
+  const btnAdminSync = document.getElementById("btn-admin-sync");
+  const btnLogout = document.getElementById("btn-logout");
+  const loginModal = document.getElementById("login-modal");
+  const btnCloseLoginModal = document.getElementById("btn-close-login-modal");
+  const authOfflineBadge = document.getElementById("auth-offline-badge");
+  const authForm = document.getElementById("auth-form");
+  const authEmail = document.getElementById("auth-email");
+  const authPassword = document.getElementById("auth-password");
+  const btnAuthSubmit = document.getElementById("btn-auth-submit");
+  const btnAuthToggle = document.getElementById("btn-auth-toggle");
+  const authErrorMsg = document.getElementById("auth-error-msg");
+  const alertsModal = document.getElementById("alerts-modal");
+  const btnCloseAlertsModal = document.getElementById("btn-close-alerts-modal");
+  const alertsListWrapper = document.getElementById("alerts-list-wrapper");
+  const historyModal = document.getElementById("history-modal");
+  const btnCloseHistoryModal = document.getElementById("btn-close-history-modal");
+  const historyCarTitle = document.getElementById("history-car-title");
+  const historyCarDealer = document.getElementById("history-car-dealer");
+  const historyChartWrapper = document.getElementById("history-chart-wrapper");
+  const historyTableBody = document.getElementById("history-table-body");
+  const createAlertModal = document.getElementById("create-alert-modal");
+  const btnCloseCreateAlert = document.getElementById("btn-close-create-alert");
+  const createAlertForm = document.getElementById("create-alert-form");
+  const alertEmailInput = document.getElementById("alert-email-input");
+  const alertTargetPrice = document.getElementById("alert-target-price");
+  const alertVehicleUrl = document.getElementById("alert-vehicle-url");
+  const alertVehicleTitle = document.getElementById("alert-vehicle-title");
+  const adminSyncModal = document.getElementById("admin-sync-modal");
+  const btnCloseAdminSync = document.getElementById("btn-close-admin-sync");
+  const btnSyncAllDealers = document.getElementById("btn-sync-all-dealers");
+  const dealersSyncList = document.getElementById("dealers-sync-list");
+  const filterBrand = document.getElementById("filter-brand");
+
   // ══════════════════════════════════════════════════════════════════════
   // INICIALIZAÇÃO
   // ══════════════════════════════════════════════════════════════════════
@@ -86,6 +136,8 @@ document.addEventListener("DOMContentLoaded", () => {
     bindEvents();
     initFilters();
     checkUrlParams();
+    initTabs();
+    initAuth();
   }
 
   /**
@@ -202,6 +254,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (voiceSearchBtn) {
       initVoiceSearch();
     }
+
+    // Grid Delegation para Clicks de Histórico e Alerta (Grupo 4)
+    if (resultsGrid) {
+      resultsGrid.addEventListener("click", handleGridButtonClick);
+    }
+
+    // Scroll para Infinite Scroll (Grupo 4)
+    window.addEventListener("scroll", handleScroll);
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -218,6 +278,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (isSearching) return;
 
     const query = searchInput.value.trim();
+
+    if (currentTab === "inventory") {
+      inventoryPage = 0;
+      inventoryHasMore = true;
+      await fetchInventoryResults();
+      return;
+    }
+
     if (!query) {
       searchInput.focus();
       return;
@@ -724,6 +792,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (filterYearMin) {
       filterYearMin.addEventListener("change", applyFilters);
     }
+    if (filterBrand) {
+      filterBrand.addEventListener("change", applyFilters);
+    }
     if (btnClearFilters) {
       btnClearFilters.addEventListener("click", resetFilters);
     }
@@ -819,6 +890,13 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function applyFilters() {
+    if (currentTab === "inventory") {
+      inventoryPage = 0;
+      inventoryHasMore = true;
+      fetchInventoryResults();
+      return;
+    }
+
     if (allCars.length === 0) return;
 
     // 1. Coleciona filtros selecionados
@@ -901,6 +979,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     if (filterYearMin) {
       filterYearMin.value = "all";
+    }
+    if (filterBrand) {
+      filterBrand.value = "all";
     }
     
     if (filterDealers) {
@@ -1345,6 +1426,567 @@ document.addEventListener("DOMContentLoaded", () => {
         marker.setOpacity(0.35);
       }
     });
+  }
+
+  // ── TABS NAVEGAÇÃO (Fase 2) ───────────────────────────────────────────────
+  function initTabs() {
+    if (navBtnSearch && navBtnInventory) {
+      navBtnSearch.addEventListener("click", () => switchTab("search"));
+      navBtnInventory.addEventListener("click", () => switchTab("inventory"));
+    }
+  }
+
+  async function switchTab(tab) {
+    if (currentTab === tab) return;
+    currentTab = tab;
+
+    // Reseta filtros ao mudar de aba para evitar estados inconsistentes
+    resetFilters();
+
+    if (tab === "search") {
+      navBtnSearch.classList.add("active");
+      navBtnInventory.classList.remove("active");
+      
+      document.querySelector(".search-hero").classList.remove("hidden");
+      urlsPanel.classList.remove("hidden");
+      
+      if (allCars.length > 0) {
+        const enriched = enrichCarsWithFipe(allCars);
+        const sorted = sortCars(enriched, sortSelect.value);
+        UI.renderCars(sorted, activeCompareUrls);
+        UI.showResultsControls(allCars.length);
+      } else {
+        els.resultsGrid().innerHTML = `
+          <div class="empty-state" id="initial-state">
+            <div class="empty-icon" aria-hidden="true">🚗</div>
+            <h3>Seu buscador está pronto</h3>
+            <p>Digite um termo acima e clique em Buscar para pesquisar em todas as revendas cadastradas simultaneamente.</p>
+          </div>
+        `;
+        UI.hideResultsControls();
+        if (filtersSidebar) filtersSidebar.classList.add("hidden");
+        if (btnToggleFilters) btnToggleFilters.classList.add("hidden");
+      }
+    } else {
+      navBtnInventory.classList.add("active");
+      navBtnSearch.classList.remove("active");
+      
+      document.querySelector(".search-hero").classList.add("hidden");
+      urlsPanel.classList.add("hidden");
+      
+      if (filtersSidebar) filtersSidebar.classList.remove("hidden");
+      if (btnToggleFilters) btnToggleFilters.classList.remove("hidden");
+      
+      inventoryPage = 0;
+      inventoryHasMore = true;
+      isLoadingInventory = false;
+      allCars = [];
+      UI.showSkeletons(6);
+      await fetchInventoryResults();
+    }
+  }
+
+  async function fetchInventoryResults(append = false) {
+    if (isLoadingInventory) return;
+    isLoadingInventory = true;
+
+    // Coleta checkboxes de revendas
+    const checkedDealers = [];
+    if (filterDealers) {
+      filterDealers.querySelectorAll("input[type='checkbox']:checked").forEach(cb => {
+        checkedDealers.push(cb.value);
+      });
+    }
+
+    const filters = {
+      dealer: checkedDealers.length === 1 ? checkedDealers[0] : "", // Filtro de revenda única
+      brand: filterBrand ? filterBrand.value : "",
+      minPrice: "",
+      maxPrice: filterPriceRange ? filterPriceRange.value : "",
+      minYear: filterYearMin ? filterYearMin.value : "",
+      maxYear: "",
+      minKm: "",
+      maxKm: filterKmRange ? filterKmRange.value : "",
+      search: searchInput.value.trim(),
+      sort: sortSelect.value,
+      limit: inventoryLimit,
+      offset: inventoryPage * inventoryLimit
+    };
+
+    if (filters.brand === "all") filters.brand = "";
+    if (filters.minYear === "all") filters.minYear = "";
+    if (filters.maxPrice === "300000" || filters.maxPrice === "300000") filters.maxPrice = "";
+    if (filters.maxKm === "200000" || filters.maxKm === "200000") filters.maxKm = "";
+
+    try {
+      const data = await Api.buscarEstoqueGeral(filters);
+      if (data.offline) {
+        window.isOfflineMode = true;
+      }
+      
+      const cars = data.results || [];
+      inventoryTotal = data.total || 0;
+      inventoryHasMore = data.hasMore;
+
+      if (append) {
+        allCars = allCars.concat(cars);
+      } else {
+        allCars = cars;
+      }
+
+      const enriched = enrichCarsWithFipe(allCars);
+      const sorted = sortCars(enriched, sortSelect.value);
+      UI.renderCars(sorted, activeCompareUrls);
+      UI.showResultsControls(inventoryTotal);
+      
+      const activeSet = new Set(allCars.map(c => c.dealer_name));
+      updateMapMarkersState(activeSet);
+      
+    } catch (err) {
+      console.error("Erro ao carregar estoque geral:", err);
+      UI.renderError("Erro ao carregar o estoque geral do banco de dados.");
+    } finally {
+      isLoadingInventory = false;
+    }
+  }
+
+  async function loadNextInventoryPage() {
+    if (!inventoryHasMore || isLoadingInventory) return;
+    inventoryPage++;
+    await fetchInventoryResults(true);
+  }
+
+  function handleScroll() {
+    if (currentTab !== "inventory") return;
+    
+    const scrollHeight = document.documentElement.scrollHeight;
+    const scrollTop = window.scrollY || window.pageYOffset;
+    const clientHeight = window.innerHeight;
+
+    if (scrollHeight - scrollTop - clientHeight < 150) {
+      loadNextInventoryPage();
+    }
+  }
+
+  // ── AUTENTICAÇÃO (Fase 2) ────────────────────────────────────────────────
+  function initAuth() {
+    const savedUser = localStorage.getItem("autobusca_user");
+    if (savedUser) {
+      try {
+        currentUser = JSON.parse(savedUser);
+        updateAuthUI();
+      } catch (e) {
+        localStorage.removeItem("autobusca_user");
+      }
+    }
+
+    btnLoginTrigger.addEventListener("click", () => {
+      if (currentUser) {
+        userDropdown.classList.toggle("hidden");
+      } else {
+        openLoginModal();
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!authMenuWrapper.contains(e.target)) {
+        userDropdown.classList.add("hidden");
+      }
+    });
+
+    btnCloseLoginModal.addEventListener("click", closeLoginModal);
+    loginModal.addEventListener("click", (e) => {
+      if (e.target === loginModal) closeLoginModal();
+    });
+
+    let authAction = "login";
+    btnAuthToggle.addEventListener("click", () => {
+      if (authAction === "login") {
+        authAction = "signup";
+        document.getElementById("login-modal-title").textContent = "Criar conta no AutoBusca";
+        btnAuthSubmit.textContent = "Criar Conta";
+        btnAuthToggle.textContent = "Já tenho uma conta. Entrar";
+      } else {
+        authAction = "login";
+        document.getElementById("login-modal-title").textContent = "Entrar no AutoBusca";
+        btnAuthSubmit.textContent = "Entrar";
+        btnAuthToggle.textContent = "Criar uma conta";
+      }
+    });
+
+    authForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      authErrorMsg.classList.add("hidden");
+      btnAuthSubmit.disabled = true;
+      btnAuthSubmit.textContent = authAction === "login" ? "Entrando..." : "Criando conta...";
+
+      try {
+        const data = await Api.auth(authAction, authEmail.value, authPassword.value);
+        if (data.success && data.user) {
+          currentUser = data.user;
+          localStorage.setItem("autobusca_user", JSON.stringify(currentUser));
+          updateAuthUI();
+          closeLoginModal();
+        } else {
+          throw new Error("Erro na autenticação.");
+        }
+      } catch (err) {
+        authErrorMsg.textContent = err.message || "Erro de login.";
+        authErrorMsg.classList.remove("hidden");
+      } finally {
+        btnAuthSubmit.disabled = false;
+        btnAuthSubmit.textContent = authAction === "login" ? "Entrar" : "Criar Conta";
+      }
+    });
+
+    btnLogout.addEventListener("click", () => {
+      currentUser = null;
+      localStorage.removeItem("autobusca_user");
+      updateAuthUI();
+      userDropdown.classList.add("hidden");
+    });
+
+    btnShowAlerts.addEventListener("click", () => {
+      userDropdown.classList.add("hidden");
+      openAlertsModal();
+    });
+    btnCloseAlertsModal.addEventListener("click", () => alertsModal.classList.add("hidden"));
+    
+    btnAdminSync.addEventListener("click", () => {
+      userDropdown.classList.add("hidden");
+      openAdminSyncModal();
+    });
+    btnCloseAdminSync.addEventListener("click", () => adminSyncModal.classList.add("hidden"));
+
+    // Inicialização da criação de alertas
+    btnCloseCreateAlert.addEventListener("click", () => createAlertModal.classList.add("hidden"));
+    createAlertModal.addEventListener("click", (e) => {
+      if (e.target === createAlertModal) createAlertModal.classList.add("hidden");
+    });
+
+    createAlertForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = alertEmailInput.value.trim();
+      const targetPrice = parseFloat(alertTargetPrice.value) || 0;
+      const url = alertVehicleUrl.value;
+      
+      try {
+        await Api.criarAlerta(email, targetPrice, url);
+        alert("Alerta de preço criado com sucesso!");
+        createAlertModal.classList.add("hidden");
+      } catch (err) {
+        console.error(err);
+        alert("Falha ao criar alerta de preço. Tente novamente.");
+      }
+    });
+  }
+
+  function openLoginModal() {
+    loginModal.classList.remove("hidden");
+    authErrorMsg.classList.add("hidden");
+    authEmail.value = "";
+    authPassword.value = "";
+    
+    if (window.isOfflineMode) {
+      authOfflineBadge.classList.remove("hidden");
+    } else {
+      authOfflineBadge.classList.add("hidden");
+    }
+  }
+
+  function closeLoginModal() {
+    loginModal.classList.add("hidden");
+  }
+
+  function updateAuthUI() {
+    if (currentUser) {
+      btnLoginTrigger.textContent = `👤 ${currentUser.email.split("@")[0]}`;
+      userEmailDisplay.textContent = currentUser.email;
+      btnAdminSync.classList.remove("hidden");
+    } else {
+      btnLoginTrigger.textContent = "👤 Entrar";
+      btnAdminSync.classList.add("hidden");
+    }
+  }
+
+  // ── ALERTAS E DELEGAÇÃO DE CLICKS GRID (Fase 2) ───────────────────────────
+  function handleGridButtonClick(e) {
+    const historyBtn = e.target.closest(".btn-history-trigger");
+    const alertBtn = e.target.closest(".btn-alert-trigger");
+    
+    if (historyBtn) {
+      const url = historyBtn.getAttribute("data-car-url");
+      const title = historyBtn.getAttribute("data-car-title");
+      const price = historyBtn.getAttribute("data-car-price");
+      const dealer = historyBtn.getAttribute("data-car-dealer");
+      openHistoryModal(url, title, price, dealer);
+    } else if (alertBtn) {
+      const url = alertBtn.getAttribute("data-car-url");
+      const title = alertBtn.getAttribute("data-car-title");
+      const price = alertBtn.getAttribute("data-car-price");
+      openCreateAlertModal(url, title, price);
+    }
+  }
+
+  function openCreateAlertModal(url, title, price) {
+    createAlertModal.classList.remove("hidden");
+    alertVehicleUrl.value = url;
+    alertVehicleTitle.value = title;
+    
+    if (currentUser) {
+      alertEmailInput.value = currentUser.email;
+      alertEmailInput.disabled = true;
+    } else {
+      alertEmailInput.value = "";
+      alertEmailInput.disabled = false;
+    }
+    
+    const currentPriceVal = parseFloat(price);
+    if (currentPriceVal && !isNaN(currentPriceVal)) {
+      alertTargetPrice.value = Math.round(currentPriceVal * 0.95);
+    } else {
+      alertTargetPrice.value = "";
+    }
+  }
+
+  async function openAlertsModal() {
+    alertsModal.classList.remove("hidden");
+    alertsListWrapper.innerHTML = "<p class='loading-alerts'>Carregando seus alertas...</p>";
+    
+    const email = currentUser ? currentUser.email : "";
+    if (!email) {
+      alertsListWrapper.innerHTML = "<p class='empty-alerts'>Faça login para gerenciar seus alertas.</p>";
+      return;
+    }
+
+    try {
+      const data = await Api.listarAlertas(email);
+      const alerts = data.alerts || [];
+      
+      if (alerts.length === 0) {
+        alertsListWrapper.innerHTML = "<p class='empty-alerts'>Você não possui alertas de preço ativos.</p>";
+        return;
+      }
+
+      alertsListWrapper.innerHTML = "";
+      alerts.forEach(alert => {
+        const item = document.createElement("div");
+        item.className = "alert-item";
+        
+        let title = alert.query ? `Busca: "${alert.query}"` : "Veículo Monitorado";
+        if (alert.vehicle_url) {
+          title = alert.vehicle_url.split("/").pop().replace(/-/g, " ").slice(0, 40) || "Veículo";
+        }
+
+        item.innerHTML = `
+          <div class="alert-item-info">
+            <span class="alert-item-title">${escapeHtml(title)}</span>
+            <span class="alert-item-price">Preço alvo: R$ ${alert.target_price.toLocaleString("pt-BR")}</span>
+          </div>
+          <button type="button" class="btn-delete-alert" data-alert-id="${alert.id}" title="Excluir alerta">🗑️</button>
+        `;
+        alertsListWrapper.appendChild(item);
+      });
+
+      alertsListWrapper.querySelectorAll(".btn-delete-alert").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-alert-id");
+          if (confirm("Deseja realmente remover este alerta?")) {
+            try {
+              await Api.removerAlerta(id);
+              openAlertsModal();
+            } catch (err) {
+              alert("Erro ao excluir alerta.");
+            }
+          }
+        });
+      });
+    } catch (err) {
+      alertsListWrapper.innerHTML = "<p class='empty-alerts'>Erro ao carregar alertas.</p>";
+    }
+  }
+
+  // ── HISTÓRICO DE PREÇOS COM SVG (Fase 2) ──────────────────────────────────
+  async function openHistoryModal(url, title, currentPrice, dealer) {
+    historyModal.classList.remove("hidden");
+    historyCarTitle.textContent = title;
+    historyCarDealer.textContent = dealer || "Revenda";
+    historyChartWrapper.innerHTML = "<p class='loading-history'>Carregando histórico...</p>";
+    historyTableBody.innerHTML = "";
+
+    try {
+      const data = await Api.obterHistoricoPreco(url, currentPrice);
+      if (data.offline) {
+        window.isOfflineMode = true;
+      }
+      
+      const history = data.history || [];
+      if (history.length === 0) {
+        historyChartWrapper.innerHTML = "<p class='empty-alerts'>Sem dados de histórico suficientes.</p>";
+        return;
+      }
+
+      history.forEach(item => {
+        const row = document.createElement("tr");
+        const dateStr = new Date(item.recorded_at).toLocaleDateString("pt-BR");
+        const priceStr = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(item.price_value);
+        row.innerHTML = `
+          <td>${dateStr}</td>
+          <td>${priceStr}</td>
+        `;
+        historyTableBody.appendChild(row);
+      });
+
+      renderHistoryChart(history);
+      
+    } catch (err) {
+      historyChartWrapper.innerHTML = "<p class='empty-alerts'>Erro ao carregar gráfico.</p>";
+    }
+  }
+
+  function renderHistoryChart(history) {
+    const width = 450;
+    const height = 150;
+    const padding = 20;
+
+    const prices = history.map(h => h.price_value);
+    const minPrice = Math.min(...prices) * 0.98;
+    const maxPrice = Math.max(...prices) * 1.02;
+    const priceRange = maxPrice - minPrice || 1;
+
+    const points = [];
+    history.forEach((h, index) => {
+      const x = padding + (index / (history.length - 1 || 1)) * (width - 2 * padding);
+      const y = height - padding - ((h.price_value - minPrice) / priceRange) * (height - 2 * padding);
+      points.push({ x, y, val: h.price_value, date: new Date(h.recorded_at).toLocaleDateString("pt-BR") });
+    });
+
+    let polylinePoints = points.map(p => `${p.x},${p.y}`).join(" ");
+
+    let gridLinesHtml = "";
+    for (let i = 1; i <= 3; i++) {
+      const yGrid = padding + (i / 4) * (height - 2 * padding);
+      gridLinesHtml += `<line x1="${padding}" y1="${yGrid}" x2="${width - padding}" y2="${yGrid}" stroke="#2d3748" stroke-dasharray="4,4" />`;
+    }
+
+    let interactiveElementsHtml = "";
+    points.forEach(p => {
+      const priceFormatted = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(p.val);
+      interactiveElementsHtml += `
+        <circle cx="${p.x}" cy="${p.y}" r="5" fill="#1976d2" stroke="#fff" stroke-width="2" />
+        <text x="${p.x}" y="${p.y - 10}" font-family="Outfit, sans-serif" font-size="10" fill="#fff" text-anchor="middle" font-weight="600">${priceFormatted}</text>
+        <text x="${p.x}" y="${height - 2}" font-family="Outfit, sans-serif" font-size="8" fill="#a0aec0" text-anchor="middle">${p.date}</text>
+      `;
+    });
+
+    historyChartWrapper.innerHTML = `
+      <svg class="history-chart-svg" viewBox="0 0 ${width} ${height}">
+        ${gridLinesHtml}
+        <polyline fill="none" stroke="#1976d2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="${polylinePoints}" />
+        ${interactiveElementsHtml}
+      </svg>
+    `;
+  }
+
+  // ── SINCRONIZAÇÃO DE STOCKS SEQUENCIAL (Fase 2) ───────────────────────────
+  const DEALER_NAMES = [
+    "ZM Veículos", "AMF Veículos", "Savinho Motors", "Ramiro Veículos", "GL Veículos",
+    "Auto Prime RP", "KR Veículos", "Base Veículos", "MM Veículos RP", "Valvech Veículos",
+    "Copa Veículos", "Auto Mais Veículos", "Rossi Veículos", "Seminovos Ribeirão Veículos",
+    "TCA Motors", "Holf Autos", "Bolsa de Veículo", "Cristal Veículos", "Lexcar Multimarcas",
+    "San Diego Veículos", "Hiper Auto", "Tharley Veículos", "Mix Veículos", "Kito Veículos",
+    "Cem Veículos"
+  ];
+
+  function openAdminSyncModal() {
+    adminSyncModal.classList.remove("hidden");
+    dealersSyncList.innerHTML = "";
+
+    DEALER_NAMES.forEach(name => {
+      const row = document.createElement("div");
+      row.className = "sync-row";
+      row.id = `sync-row-${name.replace(/\s+/g, "-")}`;
+      row.innerHTML = `
+        <span class="sync-row-name">${escapeHtml(name)}</span>
+        <div class="sync-bar-wrapper">
+          <div class="sync-bar-track">
+            <div class="sync-bar-fill" id="sync-fill-${name.replace(/\s+/g, "-")}"></div>
+          </div>
+          <span class="sync-bar-text" id="sync-text-${name.replace(/\s+/g, "-")}">0%</span>
+        </div>
+        <button type="button" class="btn-sync-single" data-dealer-name="${escapeHtml(name)}">Sincronizar</button>
+      `;
+      dealersSyncList.appendChild(row);
+    });
+
+    dealersSyncList.querySelectorAll(".btn-sync-single").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const dealer = btn.getAttribute("data-dealer-name");
+        syncSingleDealer(dealer);
+      });
+    });
+  }
+
+  async function syncSingleDealer(dealerName) {
+    const slug = dealerName.replace(/\s+/g, "-");
+    const fill = document.getElementById(`sync-fill-${slug}`);
+    const text = document.getElementById(`sync-text-${slug}`);
+    const btn = document.querySelector(`[data-dealer-name="${dealerName}"]`);
+
+    if (btn) btn.disabled = true;
+    if (fill) {
+      fill.style.width = "40%";
+      fill.style.background = "#ffa726";
+    }
+    if (text) text.textContent = "Processando...";
+
+    try {
+      const data = await Api.syncDealer(dealerName);
+      if (data.offline) {
+        window.isOfflineMode = true;
+      }
+      
+      if (fill) {
+        fill.style.width = "100%";
+        fill.style.background = "#26a69a";
+      }
+      if (text) text.textContent = data.offline ? "Bypass" : `${data.totalUpserted || data.count || 0} enc.`;
+    } catch (err) {
+      console.error(err);
+      if (fill) {
+        fill.style.width = "100%";
+        fill.style.background = "#e57373";
+      }
+      if (text) text.textContent = "Falhou";
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function syncAllDealers() {
+    btnSyncAllDealers.disabled = true;
+    btnSyncAllDealers.textContent = "Sincronizando Tudo...";
+
+    for (const dealer of DEALER_NAMES) {
+      await syncSingleDealer(dealer);
+    }
+
+    btnSyncAllDealers.disabled = false;
+    btnSyncAllDealers.textContent = "Sincronizar Todas as Revendas";
+  }
+
+  if (btnSyncAllDealers) {
+    btnSyncAllDealers.addEventListener("click", syncAllDealers);
+  }
+
+  function escapeHtml(str) {
+    if (typeof str !== "string") return String(str ?? "");
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
   // ── Inicializa tudo ao carregar ─────────────────────────────────────

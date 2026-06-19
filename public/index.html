@@ -41,10 +41,28 @@
         <h1>Auto<span>Busca</span></h1>
       </div>
 
+      <nav class="main-nav">
+        <button id="nav-btn-search" class="nav-tab-btn active" aria-label="Buscar Ofertas">🔎 Buscar Ofertas</button>
+        <button id="nav-btn-inventory" class="nav-tab-btn" aria-label="Estoque Geral">📦 Estoque Geral</button>
+      </nav>
+
       <div class="header-actions">
         <a href="fipe.html" class="nav-fipe-btn" aria-label="Consultar Tabela FIPE">
           📋 Tabela FIPE
         </a>
+
+        <!-- Botão/Dropdown de Autenticação -->
+        <div class="auth-menu-wrapper" id="auth-menu-wrapper">
+          <button id="btn-login-trigger" class="btn-login" aria-label="Fazer Login">👤 Entrar</button>
+          <div class="user-dropdown hidden" id="user-dropdown">
+            <span class="user-email" id="user-email-display">usuario@email.com</span>
+            <hr>
+            <button id="btn-show-alerts" class="dropdown-item">🔔 Meus Alertas</button>
+            <button id="btn-admin-sync" class="dropdown-item hidden">⚙️ Sincronizar</button>
+            <button id="btn-logout" class="dropdown-item">🚪 Sair</button>
+          </div>
+        </div>
+
         <button id="theme-toggle" class="theme-btn" title="Alternar tema claro/escuro" aria-label="Alternar tema">
           <span class="icon-sun" aria-hidden="true">☀️</span>
           <span class="icon-moon" aria-hidden="true">🌙</span>
@@ -199,6 +217,34 @@
             <button type="button" id="btn-close-filters" class="btn-close-filters" aria-label="Fechar filtros">✕</button>
           </div>
           <div class="filters-sidebar-body">
+            <!-- Filtro por Marca (Grupo 4) -->
+            <div class="filter-group" id="filter-brand-group">
+              <h4>Marca</h4>
+              <select id="filter-brand" class="filter-select">
+                <option value="all">Todas as marcas</option>
+                <option value="Chevrolet">Chevrolet</option>
+                <option value="Fiat">Fiat</option>
+                <option value="Volkswagen">Volkswagen</option>
+                <option value="Ford">Ford</option>
+                <option value="Toyota">Toyota</option>
+                <option value="Honda">Honda</option>
+                <option value="Hyundai">Hyundai</option>
+                <option value="Renault">Renault</option>
+                <option value="Peugeot">Peugeot</option>
+                <option value="Citroen">Citroen</option>
+                <option value="Jeep">Jeep</option>
+                <option value="Nissan">Nissan</option>
+                <option value="Mitsubishi">Mitsubishi</option>
+                <option value="Chery">Chery</option>
+                <option value="Audi">Audi</option>
+                <option value="BMW">BMW</option>
+                <option value="Mercedes-Benz">Mercedes-Benz</option>
+                <option value="Volvo">Volvo</option>
+                <option value="Kia">Kia</option>
+                <option value="Outras">Outras</option>
+              </select>
+            </div>
+
             <!-- Filtro por Revenda -->
             <div class="filter-group">
               <h4>Revendas</h4>
@@ -327,6 +373,128 @@
           <table class="compare-table" id="compare-table">
             <!-- Gerada dinamicamente pelo JS -->
           </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Login/Cadastro (Grupo 4) -->
+  <div id="login-modal" class="compare-modal hidden" role="dialog" aria-modal="true" aria-labelledby="login-modal-title">
+    <div class="compare-modal-box auth-modal-box">
+      <div class="compare-modal-header">
+        <h2 id="login-modal-title">Entrar no AutoBusca</h2>
+        <button type="button" id="btn-close-login-modal" class="btn-close-compare" aria-label="Fechar modal">✕</button>
+      </div>
+      <div class="compare-modal-body">
+        <div id="auth-offline-badge" class="auth-offline-badge hidden">⚠️ Modo Simulação Offline (Sem Banco de Dados)</div>
+        <form id="auth-form" class="auth-form">
+          <div class="form-group">
+            <label for="auth-email">E-mail</label>
+            <input type="email" id="auth-email" required placeholder="seu@email.com">
+          </div>
+          <div class="form-group">
+            <label for="auth-password">Senha</label>
+            <input type="password" id="auth-password" required placeholder="Sua senha (mínimo 6 caracteres)">
+          </div>
+          <div class="auth-actions">
+            <button type="submit" id="btn-auth-submit" class="btn-primary">Entrar</button>
+            <button type="button" id="btn-auth-toggle" class="btn-link">Criar uma conta</button>
+          </div>
+          <div id="auth-error-msg" class="auth-error-msg hidden"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Meus Alertas (Grupo 4) -->
+  <div id="alerts-modal" class="compare-modal hidden" role="dialog" aria-modal="true" aria-labelledby="alerts-modal-title">
+    <div class="compare-modal-box">
+      <div class="compare-modal-header">
+        <h2 id="alerts-modal-title">Meus Alertas de Preço</h2>
+        <button type="button" id="btn-close-alerts-modal" class="btn-close-compare" aria-label="Fechar modal">✕</button>
+      </div>
+      <div class="compare-modal-body">
+        <div class="alerts-list-wrapper" id="alerts-list-wrapper">
+          <!-- Gerado dinamicamente -->
+          <p class="empty-alerts">Você não possui alertas de preço cadastrados.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Histórico de Preços (Grupo 4) -->
+  <div id="history-modal" class="compare-modal hidden" role="dialog" aria-modal="true" aria-labelledby="history-modal-title">
+    <div class="compare-modal-box history-modal-box">
+      <div class="compare-modal-header">
+        <h2 id="history-modal-title">Histórico de Preços</h2>
+        <button type="button" id="btn-close-history-modal" class="btn-close-compare" aria-label="Fechar modal">✕</button>
+      </div>
+      <div class="compare-modal-body">
+        <div class="history-car-details">
+          <h3 id="history-car-title">Modelo do Carro</h3>
+          <span id="history-car-dealer" class="car-dealer-tag">Loja</span>
+        </div>
+        <div class="history-chart-wrapper" id="history-chart-wrapper">
+          <!-- O gráfico SVG puro será renderizado aqui -->
+        </div>
+        <div class="history-table-wrapper">
+          <table class="history-table" id="history-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Preço</th>
+              </tr>
+            </thead>
+            <tbody id="history-table-body">
+              <!-- Preenchido via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Criar Alerta (Grupo 4) -->
+  <div id="create-alert-modal" class="compare-modal hidden" role="dialog" aria-modal="true" aria-labelledby="create-alert-title">
+    <div class="compare-modal-box auth-modal-box">
+      <div class="compare-modal-header">
+        <h2 id="create-alert-title">Criar Alerta de Preço</h2>
+        <button type="button" id="btn-close-create-alert" class="btn-close-compare" aria-label="Fechar modal">✕</button>
+      </div>
+      <div class="compare-modal-body">
+        <p class="alert-modal-desc">Você será notificado por e-mail se o preço deste veículo cair!</p>
+        <form id="create-alert-form" class="auth-form">
+          <div class="form-group">
+            <label for="alert-email-input">Seu E-mail</label>
+            <input type="email" id="alert-email-input" required placeholder="seu@email.com">
+          </div>
+          <div class="form-group">
+            <label for="alert-target-price">Preço Alvo (R$)</label>
+            <input type="number" id="alert-target-price" placeholder="Ex: 50000">
+            <span class="input-help">Deixe em branco ou zero para qualquer queda de preço.</span>
+          </div>
+          <input type="hidden" id="alert-vehicle-url">
+          <input type="hidden" id="alert-vehicle-title">
+          <button type="submit" class="btn-primary" style="width:100%; margin-top:15px;">Criar Alerta</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Sincronização Administrativa (Grupo 4) -->
+  <div id="admin-sync-modal" class="compare-modal hidden" role="dialog" aria-modal="true" aria-labelledby="admin-sync-title">
+    <div class="compare-modal-box admin-sync-box">
+      <div class="compare-modal-header">
+        <h2 id="admin-sync-title">Painel de Sincronização</h2>
+        <button type="button" id="btn-close-admin-sync" class="btn-close-compare" aria-label="Fechar modal">✕</button>
+      </div>
+      <div class="compare-modal-body">
+        <p class="admin-sync-desc">Sincronize o estoque do banco de dados com os sites reais de cada revenda.</p>
+        <div class="admin-sync-actions">
+          <button type="button" id="btn-sync-all-dealers" class="btn-primary">Sincronizar Todas as Revendas</button>
+        </div>
+        <div class="dealers-sync-list" id="dealers-sync-list">
+          <!-- Preenchido via JS -->
         </div>
       </div>
     </div>

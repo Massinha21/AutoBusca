@@ -98,5 +98,117 @@ const Api = (() => {
     return eventSource;
   }
 
-  return { buscarCarros, buscarCarrosStream };
+  /**
+   * Consulta o estoque geral consolidado com filtros e paginação.
+   */
+  async function buscarEstoqueGeral(filters) {
+    const params = new URLSearchParams();
+    for (const [key, val] of Object.entries(filters)) {
+      if (val !== undefined && val !== null && val !== "") {
+        params.append(key, val);
+      }
+    }
+    const response = await fetch(`/api/estoque-geral?${params.toString()}`);
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || "Erro ao consultar estoque geral.");
+    }
+    return response.json();
+  }
+
+  /**
+   * Dispara a sincronização de uma loja específica.
+   */
+  async function syncDealer(dealerName) {
+    const response = await fetch(`/api/sync-inventory?dealer=${encodeURIComponent(dealerName)}`);
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || `Erro ao sincronizar loja ${dealerName}.`);
+    }
+    return response.json();
+  }
+
+  /**
+   * Cria um alerta de preço.
+   */
+  async function criarAlerta(email, targetPrice, vehicleUrl = null, query = null) {
+    const response = await fetch("/api/alerts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, target_price: targetPrice, vehicle_url: vehicleUrl, query })
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || "Erro ao criar alerta de preço.");
+    }
+    return response.json();
+  }
+
+  /**
+   * Lista alertas ativos por e-mail.
+   */
+  async function listarAlertas(email) {
+    const response = await fetch(`/api/alerts?email=${encodeURIComponent(email)}`);
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || "Erro ao obter alertas.");
+    }
+    return response.json();
+  }
+
+  /**
+   * Remove um alerta de preço por ID.
+   */
+  async function removerAlerta(id) {
+    const response = await fetch("/api/alerts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete", id })
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || "Erro ao remover alerta.");
+    }
+    return response.json();
+  }
+
+  /**
+   * Obtém a série histórica de preços de um veículo.
+   */
+  async function obterHistoricoPreco(url, currentPrice) {
+    const response = await fetch(`/api/price-history?url=${encodeURIComponent(url)}&price=${currentPrice}`);
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || "Erro ao obter histórico de preço.");
+    }
+    return response.json();
+  }
+
+  /**
+   * Realiza login/cadastro na proxy de autenticação.
+   */
+  async function auth(action, email, password) {
+    const response = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, email, password })
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || "Erro ao realizar autenticação.");
+    }
+    return response.json();
+  }
+
+  return {
+    buscarCarros,
+    buscarCarrosStream,
+    buscarEstoqueGeral,
+    syncDealer,
+    criarAlerta,
+    listarAlertas,
+    removerAlerta,
+    obterHistoricoPreco,
+    auth
+  };
 })();

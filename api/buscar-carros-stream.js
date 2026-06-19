@@ -9,6 +9,7 @@
 const { normalizePrice } = require("./lib/price-utils");
 const { sendWebhookAlert } = require("./lib/webhook-utils");
 const { extractMetadataFromTitle } = require("./lib/metadata-utils");
+const { supabase } = require("./lib/supabase");
 
 // ── Parsers reais (um arquivo por site de revenda) ────────────────────────
 const PARSERS = [
@@ -76,11 +77,51 @@ module.exports = async function handler(req, res) {
   }
 
   const term = query.trim();
+  const normalizedQuery = term.toLowerCase();
+
+  // Tenta buscar no cache do Supabase antes de iniciar scrapers
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from("search_cache")
+        .select("*")
+        .eq("query", normalizedQuery)
+        .single();
+
+      if (data && !error) {
+        const ageMs = Date.now() - new Date(data.updated_at).getTime();
+        const maxAgeMs = 24 * 60 * 60 * 1000; // 24 horas
+
+        if (ageMs < maxAgeMs) {
+          console.log(`[Cache HIT - SSE] Resultados retornados do banco para: "${normalizedQuery}"`);
+          // Envia lista inicial com apenas o site de cache
+          sendSSE(res, "init", {
+            sites: [{ name: "Banco de Dados (Cache)" }]
+          });
+          // Envia os resultados do cache de uma vez só
+          sendSSE(res, "site-result", {
+            name: "Banco de Dados (Cache)",
+            status: "success",
+            count: data.results.length,
+            results: data.results
+          });
+          // Finaliza o stream
+          sendSSE(res, "done", { finished: true });
+          return res.end();
+        }
+        console.log(`[Cache STALE - SSE] Cache expirado para: "${normalizedQuery}". Atualizando via scrapers...`);
+      }
+    } catch (err) {
+      console.warn("[Supabase Cache - SSE] Erro ao buscar cache:", err.message);
+    }
+  }
 
   // Envia lista inicial de sites para configurar barra de progresso no front-end
   sendSSE(res, "init", {
     sites: PARSERS.map(p => ({ name: p.name }))
   });
+
+  const accumulatedResults = [];
 
   // Executa cada parser e envia os resultados individualmente conforme terminam
   const promises = PARSERS.map(async (parser) => {
@@ -104,6 +145,11 @@ module.exports = async function handler(req, res) {
         };
       });
 
+      // Acumula os carros encontrados com sucesso para salvar no cache
+      if (cars.length > 0) {
+        accumulatedResults.push(...cars);
+      }
+
       sendSSE(res, "site-result", {
         name: parser.name,
         status: "success",
@@ -126,6 +172,26 @@ module.exports = async function handler(req, res) {
 
   // Aguarda todos os scrapers concluírem para fechar a conexão
   await Promise.all(promises);
+
+  // Salva no cache do Supabase os resultados acumulados de todos os scrapers
+  if (supabase && accumulatedResults.length > 0) {
+    try {
+      const { error } = await supabase
+        .from("search_cache")
+        .upsert({
+          query: normalizedQuery,
+          results: accumulatedResults,
+          updated_at: new Date().toISOString()
+        });
+      if (error) {
+        console.error("[Supabase Cache - SSE] Erro ao salvar cache:", error.message);
+      } else {
+        console.log(`[Cache Save - SSE] Resultados salvos no banco para: "${normalizedQuery}"`);
+      }
+    } catch (err) {
+      console.warn("[Supabase Cache - SSE] Falha ao executar upsert:", err.message);
+    }
+  }
 
   sendSSE(res, "done", { finished: true });
   res.end();

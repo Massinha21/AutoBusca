@@ -11,6 +11,7 @@
 const { normalizePrice } = require("./lib/price-utils");
 const { sendWebhookAlert } = require("./lib/webhook-utils");
 const { extractMetadataFromTitle } = require("./lib/metadata-utils");
+const { supabase } = require("./lib/supabase");
 
 // ── Parsers reais (um arquivo por site de revenda) ────────────────────────
 const PARSERS = [
@@ -68,6 +69,37 @@ module.exports = async function handler(req, res) {
   }
 
   const term = query.trim();
+  const normalizedQuery = term.toLowerCase();
+
+  // Tenta buscar no cache do Supabase
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from("search_cache")
+        .select("*")
+        .eq("query", normalizedQuery)
+        .single();
+
+      if (data && !error) {
+        const ageMs = Date.now() - new Date(data.updated_at).getTime();
+        const maxAgeMs = 24 * 60 * 60 * 1000; // 24 horas
+
+        if (ageMs < maxAgeMs) {
+          console.log(`[Cache HIT] Resultados retornados do banco para: "${normalizedQuery}"`);
+          return res.status(200).json({
+            query: term,
+            total: data.results.length,
+            cached: true,
+            updatedAt: data.updated_at,
+            results: data.results
+          });
+        }
+        console.log(`[Cache STALE] Cache expirado para: "${normalizedQuery}". Atualizando...`);
+      }
+    } catch (err) {
+      console.warn("[Supabase Cache] Erro ao buscar cache:", err.message);
+    }
+  }
 
   // Configura cabeçalho de cache CDN (Edge) com stale-while-revalidate para requisições GET
   if (req.method === "GET") {
@@ -131,6 +163,26 @@ module.exports = async function handler(req, res) {
     await Promise.all(webhookPromises).catch(err => {
       console.error("[Monitoramento] Erro ao aguardar envio de webhooks:", err);
     });
+  }
+
+  // Salva os resultados agregados no cache do Supabase
+  if (supabase && allResults.length > 0) {
+    try {
+      const { error } = await supabase
+        .from("search_cache")
+        .upsert({
+          query: normalizedQuery,
+          results: allResults,
+          updated_at: new Date().toISOString()
+        });
+      if (error) {
+        console.error("[Supabase Cache] Erro ao salvar cache:", error.message);
+      } else {
+        console.log(`[Cache Save] Resultados salvos no banco para: "${normalizedQuery}"`);
+      }
+    } catch (err) {
+      console.warn("[Supabase Cache] Falha ao executar upsert:", err.message);
+    }
   }
 
   return res.status(200).json({
