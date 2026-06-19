@@ -68,6 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnViewGrid = document.getElementById("btn-view-grid");
   const btnViewList = document.getElementById("btn-view-list");
   const resultsGrid = document.getElementById("results-grid");
+  const voiceSearchBtn = document.getElementById("voice-search-btn");
 
   // ══════════════════════════════════════════════════════════════════════
   // INICIALIZAÇÃO
@@ -190,6 +191,11 @@ document.addEventListener("DOMContentLoaded", () => {
         applyViewLayout("list");
         Storage.saveView("list");
       });
+    }
+
+    // Busca por Voz
+    if (voiceSearchBtn) {
+      initVoiceSearch();
     }
   }
 
@@ -1099,6 +1105,76 @@ document.addEventListener("DOMContentLoaded", () => {
       resultsGrid.classList.remove("view-list");
       btnViewGrid.classList.add("active");
       btnViewList.classList.remove("active");
+    }
+  }
+
+  // ── Funções da Busca por Voz ────────────────────────────────────────
+  let speechRecognition = null;
+  let isListeningVoice = false;
+
+  function initVoiceSearch() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      // Oculta o botão se não houver suporte à API no navegador
+      if (voiceSearchBtn) voiceSearchBtn.style.display = "none";
+      return;
+    }
+
+    speechRecognition = new SpeechRecognition();
+    speechRecognition.lang = "pt-BR";
+    speechRecognition.continuous = false;
+    speechRecognition.interimResults = false;
+
+    voiceSearchBtn.addEventListener("click", () => {
+      if (isListeningVoice) {
+        speechRecognition.stop();
+      } else {
+        startVoiceRecognition();
+      }
+    });
+
+    speechRecognition.onstart = () => {
+      isListeningVoice = true;
+      voiceSearchBtn.classList.add("listening");
+      searchInput.placeholder = "Ouvindo... Fale o modelo";
+      searchInput.focus();
+    };
+
+    speechRecognition.onend = () => {
+      isListeningVoice = false;
+      voiceSearchBtn.classList.remove("listening");
+      searchInput.placeholder = "Digite o modelo (ex: Onix, Corolla 2022, HB20)...";
+    };
+
+    speechRecognition.onerror = (e) => {
+      console.error("[SpeechRecognition Error]:", e.error);
+      isListeningVoice = false;
+      voiceSearchBtn.classList.remove("listening");
+      searchInput.placeholder = "Digite o modelo (ex: Onix, Corolla 2022, HB20)...";
+      
+      if (e.error === "not-allowed") {
+        alert("Permissão para microfone negada. Ative nas configurações do navegador.");
+      } else if (e.error !== "no-speech" && e.error !== "aborted") {
+        alert("Erro no reconhecimento de voz: " + e.error);
+      }
+    };
+
+    speechRecognition.onresult = (e) => {
+      const transcript = e.results[0][0].transcript;
+      if (transcript && transcript.trim()) {
+        searchInput.value = transcript.trim();
+        // Dispara a busca submetendo o formulário automaticamente
+        searchForm.dispatchEvent(new Event("submit"));
+      }
+    };
+  }
+
+  function startVoiceRecognition() {
+    if (!speechRecognition) return;
+    try {
+      speechRecognition.start();
+    } catch (err) {
+      console.warn("SpeechRecognition already started or error:", err);
     }
   }
 
