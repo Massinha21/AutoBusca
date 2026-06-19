@@ -70,6 +70,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const resultsGrid = document.getElementById("results-grid");
   const voiceSearchBtn = document.getElementById("voice-search-btn");
 
+  // Elementos do Mini-mapa
+  const mapPanel = document.getElementById("map-panel");
+  const mapPanelToggle = document.getElementById("map-panel-toggle");
+
   // ══════════════════════════════════════════════════════════════════════
   // INICIALIZAÇÃO
   // ══════════════════════════════════════════════════════════════════════
@@ -78,6 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
     loadThemePreference();
     loadSavedUrls();
     loadViewPreference();
+    initMapPanel();
     bindEvents();
     initFilters();
     checkUrlParams();
@@ -423,6 +428,7 @@ document.addEventListener("DOMContentLoaded", () => {
       UI.renderNoResults();
       if (filtersSidebar) filtersSidebar.classList.add("hidden");
       if (btnToggleFilters) btnToggleFilters.classList.add("hidden");
+      updateMapMarkersState(new Set());
     } else {
       populateFiltersData(cars);
       resetFiltersUI();
@@ -430,6 +436,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const sorted = sortCars(enriched, sortSelect.value);
       UI.renderCars(sorted, activeCompareUrls);
       UI.showResultsControls(cars.length);
+      updateMapMarkersState(new Set(cars.map(c => c.dealer_name)));
     }
   }
 
@@ -874,8 +881,10 @@ document.addEventListener("DOMContentLoaded", () => {
     
     if (sorted.length === 0) {
       UI.renderNoResultsFiltered();
+      updateMapMarkersState(new Set());
     } else {
       UI.renderCars(sorted, activeCompareUrls);
+      updateMapMarkersState(new Set(filteredCars.map(c => c.dealer_name)));
     }
     
     UI.updateResultsCount(sorted.length);
@@ -1169,13 +1178,173 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  function startVoiceRecognition() {
-    if (!speechRecognition) return;
-    try {
-      speechRecognition.start();
-    } catch (err) {
-      console.warn("SpeechRecognition already started or error:", err);
+  }
+
+  // ── Funções de visualização (Grade/Lista) ───────────────────────────
+  function loadViewPreference() {
+    const view = Storage.loadView();
+    applyViewLayout(view);
+  }
+
+  function applyViewLayout(view) {
+    if (!resultsGrid || !btnViewGrid || !btnViewList) return;
+
+    if (view === "list") {
+      resultsGrid.classList.add("view-list");
+      btnViewList.classList.add("active");
+      btnViewGrid.classList.remove("active");
+    } else {
+      resultsGrid.classList.remove("view-list");
+      btnViewGrid.classList.add("active");
+      btnViewList.classList.remove("active");
     }
+  }
+
+  // ── Funções do Mini-mapa de Revendas ────────────────────────────────
+  const DEALER_COORDINATES = {
+    "ZM Veículos": { lat: -21.1712, lng: -47.8015 },
+    "AMF Veículos": { lat: -21.1780, lng: -47.8090 },
+    "Savinho Motors": { lat: -21.1742, lng: -47.8035 },
+    "Ramiro Veículos": { lat: -21.1755, lng: -47.8062 },
+    "GL Veículos": { lat: -21.1770, lng: -47.8080 },
+    "Auto Prime RP": { lat: -21.1785, lng: -47.8095 },
+    "KR Veículos": { lat: -21.1790, lng: -47.8105 },
+    "Base Veículos": { lat: -21.1765, lng: -47.8075 },
+    "MM Veículos": { lat: -21.1800, lng: -47.8110 },
+    "Valvech Veículos": { lat: -21.1810, lng: -47.8125 },
+    "Copa Veículos": { lat: -21.1750, lng: -47.8045 },
+    "Auto Mais Veículos": { lat: -21.1735, lng: -47.8025 },
+    "Rossi Veículos": { lat: -21.1720, lng: -47.8010 },
+    "Seminovos Ribeirão": { lat: -21.1830, lng: -47.8140 },
+    "TCA Motors": { lat: -21.1705, lng: -47.8000 },
+    "Holf Autos": { lat: -21.1758, lng: -47.8070 },
+    "Bolsa de Veículo": { lat: -21.1762, lng: -47.8082 },
+    "Cristal Veículos": { lat: -21.1840, lng: -47.8150 },
+    "Lexcar Multimarcas": { lat: -21.1795, lng: -47.8055 },
+    "San Diego Veículos": { lat: -21.1760, lng: -47.8115 },
+    "Hiperauto": { lat: -21.1820, lng: -47.8120 },
+    "Tharley Veículos": { lat: -21.1715, lng: -47.7985 },
+    "Mix Veículos": { lat: -21.1730, lng: -47.8005 },
+    "Kito Veículos": { lat: -21.1725, lng: -47.7995 },
+    "Cem Veículos": { lat: -21.1740, lng: -47.8020 }
+  };
+
+  let leafletMap = null;
+  let mapMarkers = {};
+  let isMapInitialized = false;
+
+  function initMapPanel() {
+    if (mapPanelToggle && mapPanel) {
+      mapPanelToggle.addEventListener("click", toggleMapPanel);
+      mapPanelToggle.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          toggleMapPanel();
+        }
+      });
+    }
+  }
+
+  function toggleMapPanel() {
+    if (!mapPanel || !mapPanelToggle) return;
+    
+    const isCollapsed = mapPanel.classList.toggle("collapsed");
+    mapPanelToggle.setAttribute("aria-expanded", !isCollapsed);
+
+    if (!isCollapsed) {
+      if (!isMapInitialized) {
+        setupLeafletMap();
+        isMapInitialized = true;
+      } else if (leafletMap) {
+        // Recalibra o layout do Leaflet para renderizar as partes do mapa
+        setTimeout(() => {
+          leafletMap.invalidateSize();
+        }, 100);
+      }
+    }
+  }
+
+  function setupLeafletMap() {
+    if (!document.getElementById("map-container")) return;
+
+    // Inicializa o mapa centralizado em Ribeirão Preto
+    leafletMap = L.map("map-container").setView([-21.1775, -47.8103], 13);
+
+    // Adiciona camada do OpenStreetMap
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(leafletMap);
+
+    // Cria pins para cada revenda
+    Object.keys(DEALER_COORDINATES).forEach(name => {
+      const coords = DEALER_COORDINATES[name];
+      const marker = L.marker([coords.lat, coords.lng]);
+
+      const popupHtml = `
+        <div style="font-family: var(--font-body); font-size: 0.85rem; text-align: center;">
+          <strong style="display: block; margin-bottom: 4px; color: var(--text-primary); font-size: 0.9rem;">${name}</strong>
+          <a href="#" class="map-popup-filter-link" data-dealer="${name}" style="color: var(--accent); font-weight: 700; text-decoration: none;">Ver anúncios desta loja →</a>
+        </div>
+      `;
+      marker.bindPopup(popupHtml);
+      marker.addTo(leafletMap);
+
+      mapMarkers[name] = marker;
+    });
+
+    // Escuta evento de abertura de popups para atrelar filtros rápidos
+    leafletMap.on("popupopen", (e) => {
+      const el = e.popup.getElement();
+      if (!el) return;
+      const link = el.querySelector(".map-popup-filter-link");
+      if (link) {
+        link.addEventListener("click", (evt) => {
+          evt.preventDefault();
+          const dealer = link.getAttribute("data-dealer");
+          filterResultsByDealerOnly(dealer);
+          e.popup.close();
+        });
+      }
+    });
+
+    // Se já existem ofertas no momento da abertura do mapa, atualiza as opacidades dos pins
+    if (allCars.length > 0) {
+      const activeSet = new Set(allCars.map(c => c.dealer_name));
+      updateMapMarkersState(activeSet);
+    }
+  }
+
+  function filterResultsByDealerOnly(dealer) {
+    if (!filterDealers) return;
+    
+    // Marca apenas o checkbox correspondente no painel de filtros laterais
+    filterDealers.querySelectorAll("input[type='checkbox']").forEach(cb => {
+      cb.checked = (cb.value === dealer);
+    });
+    
+    // Aplica os filtros
+    applyFilters();
+
+    // Rola a página para os resultados de forma suave
+    const resultsControls = document.getElementById("results-controls");
+    if (resultsControls) {
+      resultsControls.scrollIntoView({ behavior: "smooth" });
+    }
+  }
+
+  function updateMapMarkersState(activeDealers = null) {
+    if (!leafletMap || !isMapInitialized) return;
+
+    Object.keys(mapMarkers).forEach(name => {
+      const marker = mapMarkers[name];
+      // Se não há dados ativos de busca, todos os marcadores ficam totalmente opacos (1.0).
+      // Se há busca ativa, acentua os marcadores das revendas encontradas e esmaece as outras (0.35).
+      if (!activeDealers || activeDealers.size === 0 || activeDealers.has(name)) {
+        marker.setOpacity(1.0);
+      } else {
+        marker.setOpacity(0.35);
+      }
+    });
   }
 
   // ── Inicializa tudo ao carregar ─────────────────────────────────────

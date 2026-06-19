@@ -25,7 +25,9 @@
   <meta name="theme-color" content="#090d18">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+  <!-- Leaflet Map API -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 </head>
 
 <body class="dark-theme">
@@ -174,6 +176,19 @@
 
       <!-- Banner de comparação da Tabela FIPE (inserido dinamicamente) -->
       <div id="fipe-compare-container"></div>
+
+      <!-- Mapa de Lojas (Colapsável) -->
+      <div class="map-panel collapsed" id="map-panel">
+        <div class="map-panel-header" id="map-panel-toggle" role="button" tabindex="0" aria-expanded="false" aria-controls="map-panel-body">
+          <div class="map-panel-title">
+            <span class="panel-icon">🗺️</span> Mapa das Revendas Integradas
+          </div>
+          <span class="map-panel-chevron">▼</span>
+        </div>
+        <div class="map-panel-body" id="map-panel-body" role="region" aria-labelledby="map-panel-toggle">
+          <div id="map-container"></div>
+        </div>
+      </div>
 
       <!-- ═══════ SEÇÃO DE LAYOUT DE RESULTADOS E FILTROS ═══════ -->
       <div class="search-results-layout">
