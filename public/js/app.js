@@ -64,6 +64,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const compareTable = document.getElementById("compare-table");
   const btnCloseCompareModal = document.getElementById("btn-close-compare-modal");
 
+  // Elementos do Modo de Visualização (Grade/Lista)
+  const btnViewGrid = document.getElementById("btn-view-grid");
+  const btnViewList = document.getElementById("btn-view-list");
+  const resultsGrid = document.getElementById("results-grid");
+
   // ══════════════════════════════════════════════════════════════════════
   // INICIALIZAÇÃO
   // ══════════════════════════════════════════════════════════════════════
@@ -71,6 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function init() {
     loadThemePreference();
     loadSavedUrls();
+    loadViewPreference();
     bindEvents();
     initFilters();
     checkUrlParams();
@@ -171,6 +177,18 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.target === compareModal) {
           closeCompareModal();
         }
+      });
+    }
+
+    // Alternância de visualização (Grade/Lista)
+    if (btnViewGrid && btnViewList) {
+      btnViewGrid.addEventListener("click", () => {
+        applyViewLayout("grid");
+        Storage.saveView("grid");
+      });
+      btnViewList.addEventListener("click", () => {
+        applyViewLayout("list");
+        Storage.saveView("list");
       });
     }
   }
@@ -1062,6 +1080,26 @@ document.addEventListener("DOMContentLoaded", () => {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
+  }
+
+  // ── Funções de visualização (Grade/Lista) ───────────────────────────
+  function loadViewPreference() {
+    const view = Storage.loadView();
+    applyViewLayout(view);
+  }
+
+  function applyViewLayout(view) {
+    if (!resultsGrid || !btnViewGrid || !btnViewList) return;
+
+    if (view === "list") {
+      resultsGrid.classList.add("view-list");
+      btnViewList.classList.add("active");
+      btnViewGrid.classList.remove("active");
+    } else {
+      resultsGrid.classList.remove("view-list");
+      btnViewGrid.classList.add("active");
+      btnViewList.classList.remove("active");
+    }
   }
 
   // ── Inicializa tudo ao carregar ─────────────────────────────────────

@@ -2063,5 +2063,108 @@ input, textarea, select { font-family: var(--font-body); }
   }
 }
 
+/* ═══════════════════════════════════════════════════════════
+   20. BOTÃO TOGGLE DE LAYOUT E MODO LISTA
+   ═══════════════════════════════════════════════════════════ */
+
+/* Wrapper e botões de toggle */
+.view-toggle-wrapper {
+  display: inline-flex;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+  gap: 2px;
+  align-items: center;
+}
+
+.view-toggle-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.view-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+}
+
+.light-theme .view-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.view-toggle-btn.active {
+  background: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+/* Modo Lista (.view-list) aplicado ao contêiner #results-grid */
+.results-grid.view-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.results-grid.view-list .car-card {
+  flex-direction: row;
+  height: 190px;
+  width: 100%;
+}
+
+.results-grid.view-list .car-image-wrap {
+  width: 280px;
+  height: 100%;
+  flex-shrink: 0;
+}
+
+.results-grid.view-list .car-body {
+  padding: 1.15rem 1.5rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.results-grid.view-list .car-meta {
+  margin-top: 2px;
+}
+
+.results-grid.view-list .fipe-card-badge {
+  margin-top: 2px;
+  align-self: flex-start;
+}
+
+.results-grid.view-list .car-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+}
+
+/* Responsividade: Volta para coluna em telas pequenas */
+@media (max-width: 768px) {
+  .results-grid.view-list .car-card {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .results-grid.view-list .car-image-wrap {
+    width: 100%;
+    height: 185px;
+  }
+}
+
+
 
 

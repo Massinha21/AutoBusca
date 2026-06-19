@@ -17,6 +17,7 @@ const Storage = (() => {
   const KEYS = {
     URLS:  "autobusca:urls",
     THEME: "autobusca:theme",
+    VIEW:  "autobusca:view",
   };
 
   // Lista padrão de revendas já conhecidas
@@ -130,6 +131,22 @@ const Storage = (() => {
     return localStorage.getItem(KEYS.THEME) || "dark";
   }
 
+  /**
+   * Salva a preferência de visualização de resultados (grid/list).
+   * @param {"grid"|"list"} view
+   */
+  function saveView(view) {
+    localStorage.setItem(KEYS.VIEW, view);
+  }
+
+  /**
+   * Carrega a preferência de visualização de resultados do usuário.
+   * @returns {"grid"|"list"}
+   */
+  function loadView() {
+    return localStorage.getItem(KEYS.VIEW) || "grid";
+  }
+
   // Expõe apenas as funções necessárias para os outros módulos
   return {
     saveUrls,
@@ -139,5 +156,7 @@ const Storage = (() => {
     urlsToText,
     saveTheme,
     loadTheme,
+    saveView,
+    loadView,
   };
 })();
