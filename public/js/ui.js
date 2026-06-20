@@ -164,8 +164,8 @@ const UI = (() => {
         ${comparisonHtml}
         
         <div class="car-actions-row" style="display:flex; gap:6px; margin: 10px 0;">
-          <button type="button" class="btn-history-trigger" data-car-url="${escapeHtml(car.url)}" data-car-title="${escapeHtml(car.title)}" data-car-price="${car.price_value || 0}" data-car-dealer="${escapeHtml(car.dealer_name || '')}">📈 Histórico</button>
-          <button type="button" class="btn-alert-trigger" data-car-url="${escapeHtml(car.url)}" data-car-title="${escapeHtml(car.title)}" data-car-price="${car.price_value || 0}">🔔 Alerta</button>
+          
+          
         </div>
 
         <div class="car-footer">
