@@ -24,13 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let activeCompareUrls = new Set(); // URLs dos veículos selecionados para comparação
 
   // ── Estado global da Fase 2 (Supabase) ──────────────────────────────────
-  let currentTab = "search"; // "search" ou "inventory"
   let currentUser = null; // Informações do usuário logado
-  let inventoryPage = 0;
-  let inventoryTotal = 0;
-  let inventoryHasMore = true;
-  let isLoadingInventory = false;
-  const inventoryLimit = 24;
 
 
   // ── Elementos do DOM ───────────────────────────────────────────────────
@@ -85,7 +79,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Elementos do Grupo 4 (Supabase)
   const navBtnSearch = document.getElementById("nav-btn-search");
-  const navBtnInventory = document.getElementById("nav-btn-inventory");
   const authMenuWrapper = document.getElementById("auth-menu-wrapper");
   const btnLoginTrigger = document.getElementById("btn-login-trigger");
   const userDropdown = document.getElementById("user-dropdown");
@@ -288,13 +281,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (isSearching) return;
 
     const query = searchInput.value.trim();
-
-    if (currentTab === "inventory") {
-      inventoryPage = 0;
-      inventoryHasMore = true;
-      await fetchInventoryResults();
-      return;
-    }
 
     if (!query) {
       searchInput.focus();
@@ -900,12 +886,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function applyFilters() {
-    if (currentTab === "inventory") {
-      inventoryPage = 0;
-      inventoryHasMore = true;
-      fetchInventoryResults();
-      return;
-    }
 
     if (allCars.length === 0) return;
 
@@ -1286,145 +1266,6 @@ document.addEventListener("DOMContentLoaded", () => {
       resultsGrid.classList.remove("view-list");
       btnViewGrid.classList.add("active");
       btnViewList.classList.remove("active");
-    }
-  }
-
-  // ── TABS NAVEGAÇÃO (Fase 2) ───────────────────────────────────────────────
-  function initTabs() {
-    if (navBtnSearch && navBtnInventory) {
-      navBtnSearch.addEventListener("click", () => switchTab("search"));
-      navBtnInventory.addEventListener("click", () => switchTab("inventory"));
-    }
-  }
-
-  async function switchTab(tab) {
-    if (currentTab === tab) return;
-    currentTab = tab;
-
-    // Reseta filtros ao mudar de aba para evitar estados inconsistentes
-    resetFilters();
-
-    if (tab === "search") {
-      navBtnSearch.classList.add("active");
-      navBtnInventory.classList.remove("active");
-      
-      document.querySelector(".search-hero").classList.remove("hidden");
-      urlsPanel.classList.remove("hidden");
-      
-      if (allCars.length > 0) {
-        const enriched = enrichCarsWithFipe(allCars);
-        const sorted = sortCars(enriched, sortSelect.value);
-        UI.renderCars(sorted, activeCompareUrls);
-        UI.showResultsControls(allCars.length);
-      } else {
-        els.resultsGrid().innerHTML = `
-          <div class="empty-state" id="initial-state">
-            <div class="empty-icon" aria-hidden="true">🚗</div>
-            <h3>Seu buscador está pronto</h3>
-            <p>Digite um termo acima e clique em Buscar para pesquisar em todas as revendas cadastradas simultaneamente.</p>
-          </div>
-        `;
-        UI.hideResultsControls();
-        if (filtersSidebar) filtersSidebar.classList.add("hidden");
-        if (btnToggleFilters) btnToggleFilters.classList.add("hidden");
-      }
-    } else {
-      navBtnInventory.classList.add("active");
-      navBtnSearch.classList.remove("active");
-      
-      document.querySelector(".search-hero").classList.add("hidden");
-      urlsPanel.classList.add("hidden");
-      
-      if (filtersSidebar) filtersSidebar.classList.remove("hidden");
-      if (btnToggleFilters) btnToggleFilters.classList.remove("hidden");
-      
-      inventoryPage = 0;
-      inventoryHasMore = true;
-      isLoadingInventory = false;
-      allCars = [];
-      UI.showSkeletons(6);
-      await fetchInventoryResults();
-    }
-  }
-
-  async function fetchInventoryResults(append = false) {
-    if (isLoadingInventory) return;
-    isLoadingInventory = true;
-
-    // Coleta checkboxes de revendas
-    const checkedDealers = [];
-    if (filterDealers) {
-      filterDealers.querySelectorAll("input[type='checkbox']:checked").forEach(cb => {
-        checkedDealers.push(cb.value);
-      });
-    }
-
-    const filters = {
-      dealer: checkedDealers.length === 1 ? checkedDealers[0] : "", // Filtro de revenda única
-      brand: filterBrand ? filterBrand.value : "",
-      minPrice: "",
-      maxPrice: filterPriceRange ? filterPriceRange.value : "",
-      minYear: filterYearMin ? filterYearMin.value : "",
-      maxYear: "",
-      minKm: "",
-      maxKm: filterKmRange ? filterKmRange.value : "",
-      search: searchInput.value.trim(),
-      sort: sortSelect.value,
-      limit: inventoryLimit,
-      offset: inventoryPage * inventoryLimit
-    };
-
-    if (filters.brand === "all") filters.brand = "";
-    if (filters.minYear === "all") filters.minYear = "";
-    if (filters.maxPrice === "300000" || filters.maxPrice === "300000") filters.maxPrice = "";
-    if (filters.maxKm === "200000" || filters.maxKm === "200000") filters.maxKm = "";
-
-    try {
-      const data = await Api.buscarEstoqueGeral(filters);
-      if (data.offline) {
-        window.isOfflineMode = true;
-      }
-      
-      const cars = data.results || [];
-      inventoryTotal = data.total || 0;
-      inventoryHasMore = data.hasMore;
-
-      if (append) {
-        allCars = allCars.concat(cars);
-      } else {
-        allCars = cars;
-      }
-
-      const enriched = enrichCarsWithFipe(allCars);
-      const sorted = sortCars(enriched, sortSelect.value);
-      UI.renderCars(sorted, activeCompareUrls);
-      UI.showResultsControls(inventoryTotal);
-      
-      const activeSet = new Set(allCars.map(c => c.dealer_name));
-      
-    } catch (err) {
-      console.error("Erro ao carregar estoque geral:", err);
-      UI.renderError("Erro ao carregar o estoque geral do banco de dados.");
-    } finally {
-      isLoadingInventory = false;
-    }
-  }
-
-  async function loadNextInventoryPage() {
-    if (!inventoryHasMore || isLoadingInventory) return;
-    inventoryPage++;
-    await fetchInventoryResults(true);
-  }
-
-  function handleScroll() {
-    if (currentTab !== "inventory") return;
-    
-    const scrollHeight = document.documentElement.scrollHeight;
-    const scrollTop = window.scrollY || window.pageYOffset;
-    const clientHeight = window.innerHeight;
-
-    if (scrollHeight - scrollTop - clientHeight < 150) {
-      loadNextInventoryPage();
     }
   }
 
