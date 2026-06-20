@@ -3,7 +3,7 @@
 // Recebe: GET /api/estoque-geral?dealer=X&brand=Y&minPrice=Z&maxPrice=W...
 //
 
-const { supabase } = require("./lib/supabase");
+const { supabase } = require("./_lib/supabase");
 
 // Mock de dados enriquecido para uso offline (caso Supabase não esteja conectado)
 const OFFLINE_CARS = [

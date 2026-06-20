@@ -5,7 +5,7 @@
 // Retorna um relatório com a saúde, tempo de resposta e erros de cada revenda.
 //
 
-const { sendWebhookAlert } = require("./lib/webhook-utils");
+const { sendWebhookAlert } = require("./_lib/webhook-utils");
 
 const PARSERS = [
   require("./_scrapers/zmveiculos"),

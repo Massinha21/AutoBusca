@@ -5,7 +5,7 @@
 // POST: Adiciona ou atualiza um veículo (se ID for fornecido)
 // DELETE: Inativa um veículo (soft delete)
 
-const { supabase } = require("./lib/supabase");
+const { supabase } = require("./_lib/supabase");
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin",  "*");

@@ -3,7 +3,7 @@
 // Recebe: GET /api/price-history?url=URL_DO_VEICULO&price=PRECO_ATUAL
 //
 
-const { supabase } = require("./lib/supabase");
+const { supabase } = require("./_lib/supabase");
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin",  "*");

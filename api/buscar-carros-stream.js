@@ -6,10 +6,10 @@
 // Retorna: Stream de dados formatados como Server-Sent Events (SSE)
 //
 
-const { normalizePrice } = require("./lib/price-utils");
-const { sendWebhookAlert } = require("./lib/webhook-utils");
-const { extractMetadataFromTitle } = require("./lib/metadata-utils");
-const { supabase } = require("./lib/supabase");
+const { normalizePrice } = require("./_lib/price-utils");
+const { sendWebhookAlert } = require("./_lib/webhook-utils");
+const { extractMetadataFromTitle } = require("./_lib/metadata-utils");
+const { supabase } = require("./_lib/supabase");
 
 // ── Parsers reais (um arquivo por site de revenda) ────────────────────────
 const PARSERS = [
