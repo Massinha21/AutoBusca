@@ -83,7 +83,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnLoginTrigger = document.getElementById("btn-login-trigger");
   const userDropdown = document.getElementById("user-dropdown");
   const userEmailDisplay = document.getElementById("user-email-display");
-    const btnAdminSync = document.getElementById("btn-admin-sync");
+  const btnShowAlerts = document.getElementById("btn-show-alerts");
+  const btnAdminSync = document.getElementById("btn-admin-sync");
   const btnLogout = document.getElementById("btn-logout");
   const loginModal = document.getElementById("login-modal");
   const btnCloseLoginModal = document.getElementById("btn-close-login-modal");
@@ -1346,8 +1347,7 @@ document.addEventListener("DOMContentLoaded", () => {
       userDropdown.classList.add("hidden");
     });
 
-    
-    
+
     
     btnAdminSync.addEventListener("click", () => {
       userDropdown.classList.add("hidden");
@@ -1382,23 +1382,7 @@ document.addEventListener("DOMContentLoaded", () => {
       myStockForm.addEventListener("submit", handleMyStockSubmit);
     }
 
-    
 
-    createAlertForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const email = alertEmailInput.value.trim();
-      const targetPrice = parseFloat(alertTargetPrice.value) || 0;
-      const url = alertVehicleUrl.value;
-      
-      try {
-        await Api.criarAlerta(email, targetPrice, url);
-        alert("Alerta de preço criado com sucesso!");
-        createAlertModal.classList.add("hidden");
-      } catch (err) {
-        console.error(err);
-        alert("Falha ao criar alerta de preço. Tente novamente.");
-      }
-    });
   }
 
   function openLoginModal() {
@@ -1429,8 +1413,166 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // ── ALERTAS E DELEGAÇÃO DE CLICKS GRID (Fase 2) ───────────────────────────
+  function handleGridButtonClick(e) {
+    const historyBtn = e.target.closest(".btn-history-trigger");
+    const alertBtn = e.target.closest(".btn-alert-trigger");
+    
+    if (historyBtn) {
+      const url = historyBtn.getAttribute("data-car-url");
+      const title = historyBtn.getAttribute("data-car-title");
+      const price = historyBtn.getAttribute("data-car-price");
+      const dealer = historyBtn.getAttribute("data-car-dealer");
+      openHistoryModal(url, title, price, dealer);
+    } else if (alertBtn) {
+      const url = alertBtn.getAttribute("data-car-url");
+      const title = alertBtn.getAttribute("data-car-title");
+      const price = alertBtn.getAttribute("data-car-price");
+      openCreateAlertModal(url, title, price);
+    }
+  }
+
+  function openCreateAlertModal(url, title, price) {
+    createAlertModal.classList.remove("hidden");
+    alertVehicleUrl.value = url;
+    alertVehicleTitle.value = title;
+    
+    if (currentUser) {
+      alertEmailInput.value = currentUser.email;
+      alertEmailInput.disabled = true;
+    } else {
+      alertEmailInput.value = "";
+      alertEmailInput.disabled = false;
+    }
+    
+    const currentPriceVal = parseFloat(price);
+    if (currentPriceVal && !isNaN(currentPriceVal)) {
+      alertTargetPrice.value = Math.round(currentPriceVal * 0.95);
+    } else {
+      alertTargetPrice.value = "";
+    }
+  }
+
+  async function openAlertsModal() {
+    alertsModal.classList.remove("hidden");
+    alertsListWrapper.innerHTML = "<p class='loading-alerts'>Carregando seus alertas...</p>";
+    
+    const email = currentUser ? currentUser.email : "";
+    if (!email) {
+      alertsListWrapper.innerHTML = "<p class='empty-alerts'>Faça login para gerenciar seus alertas.</p>";
+      return;
+    }
+
+    try {
+      const data = await Api.listarAlertas(email);
+      const alerts = data.alerts || [];
+      
+      if (alerts.length === 0) {
+        alertsListWrapper.innerHTML = "<p class='empty-alerts'>Você não possui alertas de preço ativos.</p>";
+        return;
+      }
+
+      alertsListWrapper.innerHTML = "";
+      alerts.forEach(alert => {
+        const item = document.createElement("div");
+        item.className = "alert-item";
+        
+        let title = alert.query ? `Busca: "${alert.query}"` : "Veículo Monitorado";
+        if (alert.vehicle_url) {
+          title = alert.vehicle_url.split("/").pop().replace(/-/g, " ").slice(0, 40) || "Veículo";
+        }
+
+        item.innerHTML = `
+          <div class="alert-item-info">
+            <span class="alert-item-title">${escapeHtml(title)}</span>
+            <span class="alert-item-price">Preço alvo: R$ ${alert.target_price.toLocaleString("pt-BR")}</span>
+          </div>
+          <button type="button" class="btn-delete-alert" data-alert-id="${alert.id}" title="Excluir alerta">🗑️</button>
+        `;
+        alertsListWrapper.appendChild(item);
+      });
+
+      alertsListWrapper.querySelectorAll(".btn-delete-alert").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-alert-id");
+          if (confirm("Deseja realmente remover este alerta?")) {
+            try {
+              await Api.removerAlerta(id);
+              openAlertsModal();
+            } catch (err) {
+              alert("Erro ao excluir alerta.");
+            }
+          }
+        });
+      });
+    } catch (err) {
+      alertsListWrapper.innerHTML = "<p class='empty-alerts'>Erro ao carregar alertas.</p>";
+    }
+  }
+
   // ── HISTÓRICO DE PREÇOS COM SVG (Fase 2) ──────────────────────────────────
-  
+  async function openHistoryModal(url, title, currentPrice, dealer) {
+    historyModal.classList.remove("hidden");
+    historyCarTitle.textContent = title;
+    historyCarDealer.textContent = dealer || "Revenda";
+    historyChartWrapper.innerHTML = "<p class='loading-history'>Carregando histórico...</p>";
+    historyTableBody.innerHTML = "";
+
+    try {
+      const data = await Api.obterHistoricoPreco(url, currentPrice);
+      if (data.offline) {
+        window.isOfflineMode = true;
+      }
+      
+      const history = data.history || [];
+      if (history.length === 0) {
+        historyChartWrapper.innerHTML = "<p class='empty-alerts'>Sem dados de histórico suficientes.</p>";
+        return;
+      }
+
+      history.forEach(item => {
+        const row = document.createElement("tr");
+        const dateStr = new Date(item.recorded_at).toLocaleDateString("pt-BR");
+        const priceStr = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(item.price_value);
+        row.innerHTML = `
+          <td>${dateStr}</td>
+          <td>${priceStr}</td>
+        `;
+        historyTableBody.appendChild(row);
+      });
+
+      renderHistoryChart(history);
+      
+    } catch (err) {
+      historyChartWrapper.innerHTML = "<p class='empty-alerts'>Erro ao carregar gráfico.</p>";
+    }
+  }
+
+  function renderHistoryChart(history) {
+    const width = 450;
+    const height = 150;
+    const padding = 20;
+
+    const prices = history.map(h => h.price_value);
+    const minPrice = Math.min(...prices) * 0.98;
+    const maxPrice = Math.max(...prices) * 1.02;
+    const priceRange = maxPrice - minPrice || 1;
+
+    const points = [];
+    history.forEach((h, index) => {
+      const x = padding + (index / (history.length - 1 || 1)) * (width - 2 * padding);
+      const y = height - padding - ((h.price_value - minPrice) / priceRange) * (height - 2 * padding);
+      points.push({ x, y, val: h.price_value, date: new Date(h.recorded_at).toLocaleDateString("pt-BR") });
+    });
+
+    let polylinePoints = points.map(p => `${p.x},${p.y}`).join(" ");
+
+    let gridLinesHtml = "";
+    for (let i = 1; i <= 3; i++) {
+      const yGrid = padding + (i / 4) * (height - 2 * padding);
+      gridLinesHtml += `<line x1="${padding}" y1="${yGrid}" x2="${width - padding}" y2="${yGrid}" stroke="#2d3748" stroke-dasharray="4,4" />`;
+    }
+
     let interactiveElementsHtml = "";
     points.forEach(p => {
       const priceFormatted = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(p.val);
