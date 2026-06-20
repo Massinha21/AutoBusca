@@ -143,7 +143,6 @@ document.addEventListener("DOMContentLoaded", () => {
     loadThemePreference();
     loadSavedUrls();
     loadViewPreference();
-    initMapPanel();
     bindEvents();
     initFilters();
     checkUrlParams();
@@ -1290,153 +1289,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ── Funções do Mini-mapa de Revendas ────────────────────────────────
-  const DEALER_COORDINATES = {
-    "ZM Veículos": { lat: -21.2335, lng: -47.8545 },
-    "AMF Veículos": { lat: -21.2336, lng: -47.8546 },
-    "Savinho Motors": { lat: -21.2046129, lng: -47.7752232 },
-    "Ramiro Veículos": { lat: -21.1730, lng: -47.8020 },
-    "GL Veículos": { lat: -21.2050721, lng: -47.7720125 },
-    "Auto Prime RP": { lat: -21.1592993, lng: -47.8083764 },
-    "KR Veículos": { lat: -21.1879399, lng: -47.7953239 },
-    "Base Veículos": { lat: -21.2119737, lng: -47.7787608 },
-    "MM Veículos": { lat: -21.1875093, lng: -47.7920205 },
-    "Valvech Veículos": { lat: -21.1931872, lng: -47.8215016 },
-    "Copa Veículos": { lat: -21.2026171, lng: -47.7949258 },
-    "Auto Mais Veículos": { lat: -21.1749196, lng: -47.8035016 },
-    "Rossi Veículos": { lat: -21.1649642, lng: -47.8196494 },
-    "Seminovos Ribeirão": { lat: -21.1882983, lng: -47.8295508 },
-    "TCA Motors": { lat: -21.1869835, lng: -47.8127694 },
-    "Holf Autos": { lat: -21.2142596, lng: -47.8287652 },
-    "Bolsa de Veículo": { lat: -21.1771842, lng: -47.8015926 },
-    "Cristal Veículos": { lat: -21.1718389, lng: -47.8071746 },
-    "Lexcar Multimarcas": { lat: -21.1502876, lng: -47.8018683 },
-    "San Diego Veículos": { lat: -21.2079473, lng: -47.7904259 },
-    "Hiperauto": { lat: -21.164672, lng: -47.788591 },
-    "Tharley Veículos": { lat: -21.1699057, lng: -47.8098209 },
-    "Mix Veículos": { lat: -21.1513578, lng: -47.825274 },
-    "Kito Veículos": { lat: -21.1633785, lng: -47.7894561 },
-    "Cem Veículos": { lat: -21.1718389, lng: -47.8071746 }
-  };
-
-  let leafletMap = null;
-  let mapMarkers = {};
-  let isMapInitialized = false;
-
-  function initMapPanel() {
-    if (mapPanelToggle && mapPanel) {
-      mapPanelToggle.addEventListener("click", toggleMapPanel);
-      mapPanelToggle.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          toggleMapPanel();
-        }
-      });
-    }
-  }
-
-  function toggleMapPanel() {
-    if (!mapPanel || !mapPanelToggle) return;
-    
-    const isCollapsed = mapPanel.classList.toggle("collapsed");
-    mapPanelToggle.setAttribute("aria-expanded", !isCollapsed);
-
-    if (!isCollapsed) {
-      if (!isMapInitialized) {
-        setupLeafletMap();
-        isMapInitialized = true;
-      } else if (leafletMap) {
-        // Recalibra o layout do Leaflet para renderizar as partes do mapa
-        setTimeout(() => {
-          leafletMap.invalidateSize();
-        }, 100);
-      }
-    }
-  }
-
-  function setupLeafletMap() {
-    if (!document.getElementById("map-container")) return;
-
-    // Inicializa o mapa centralizado em Ribeirão Preto
-    leafletMap = L.map("map-container").setView([-21.1775, -47.8103], 13);
-
-    // Adiciona camada do OpenStreetMap
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(leafletMap);
-
-    // Cria pins para cada revenda
-    Object.keys(DEALER_COORDINATES).forEach(name => {
-      const coords = DEALER_COORDINATES[name];
-      const marker = L.marker([coords.lat, coords.lng]);
-
-      const popupHtml = `
-        <div style="font-family: var(--font-body); font-size: 0.85rem; text-align: center;">
-          <strong style="display: block; margin-bottom: 4px; color: var(--text-primary); font-size: 0.9rem;">${name}</strong>
-          <a href="#" class="map-popup-filter-link" data-dealer="${name}" style="color: var(--accent); font-weight: 700; text-decoration: none;">Ver anúncios desta loja →</a>
-        </div>
-      `;
-      marker.bindPopup(popupHtml);
-      marker.addTo(leafletMap);
-
-      mapMarkers[name] = marker;
-    });
-
-    // Escuta evento de abertura de popups para atrelar filtros rápidos
-    leafletMap.on("popupopen", (e) => {
-      const el = e.popup.getElement();
-      if (!el) return;
-      const link = el.querySelector(".map-popup-filter-link");
-      if (link) {
-        link.addEventListener("click", (evt) => {
-          evt.preventDefault();
-          const dealer = link.getAttribute("data-dealer");
-          filterResultsByDealerOnly(dealer);
-          e.popup.close();
-        });
-      }
-    });
-
-    // Se já existem ofertas no momento da abertura do mapa, atualiza as opacidades dos pins
-    if (allCars.length > 0) {
-      const activeSet = new Set(allCars.map(c => c.dealer_name));
-      updateMapMarkersState(activeSet);
-    }
-  }
-
-  function filterResultsByDealerOnly(dealer) {
-    if (!filterDealers) return;
-    
-    // Marca apenas o checkbox correspondente no painel de filtros laterais
-    filterDealers.querySelectorAll("input[type='checkbox']").forEach(cb => {
-      cb.checked = (cb.value === dealer);
-    });
-    
-    // Aplica os filtros
-    applyFilters();
-
-    // Rola a página para os resultados de forma suave
-    const resultsControls = document.getElementById("results-controls");
-    if (resultsControls) {
-      resultsControls.scrollIntoView({ behavior: "smooth" });
-    }
-  }
-
-  function updateMapMarkersState(activeDealers = null) {
-    if (!leafletMap || !isMapInitialized) return;
-
-    Object.keys(mapMarkers).forEach(name => {
-      const marker = mapMarkers[name];
-      // Se não há dados ativos de busca, todos os marcadores ficam totalmente opacos (1.0).
-      // Se há busca ativa, acentua os marcadores das revendas encontradas e esmaece as outras (0.35).
-      if (!activeDealers || activeDealers.size === 0 || activeDealers.has(name)) {
-        marker.setOpacity(1.0);
-      } else {
-        marker.setOpacity(0.35);
-      }
-    });
-  }
-
   // ── TABS NAVEGAÇÃO (Fase 2) ───────────────────────────────────────────────
   function initTabs() {
     if (navBtnSearch && navBtnInventory) {
@@ -1549,7 +1401,6 @@ document.addEventListener("DOMContentLoaded", () => {
       UI.showResultsControls(inventoryTotal);
       
       const activeSet = new Set(allCars.map(c => c.dealer_name));
-      updateMapMarkersState(activeSet);
       
     } catch (err) {
       console.error("Erro ao carregar estoque geral:", err);
