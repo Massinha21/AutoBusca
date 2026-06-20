@@ -1270,8 +1270,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  }
-
   // ── Funções de visualização (Grade/Lista) ───────────────────────────
   function loadViewPreference() {
     const view = Storage.loadView();
