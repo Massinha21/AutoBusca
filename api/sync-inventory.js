@@ -170,14 +170,16 @@ module.exports = async function handler(req, res) {
         const meta = extractMetadataFromTitle(car.title);
         
         let yearVal = null;
-        if (meta.year) {
-          const match = meta.year.match(/\b\d{4}\b/);
+        let bestYear = car.year || meta.year;
+        if (bestYear) {
+          const match = String(bestYear).match(/\b\d{4}\b/);
           if (match) yearVal = parseInt(match[0], 10);
         }
 
         let kmVal = null;
-        if (meta.km) {
-          const rawNum = meta.km.replace(/\D/g, "");
+        let bestKm = car.km || meta.km;
+        if (bestKm) {
+          const rawNum = String(bestKm).replace(/\D/g, "");
           if (rawNum) kmVal = parseInt(rawNum, 10);
         }
 

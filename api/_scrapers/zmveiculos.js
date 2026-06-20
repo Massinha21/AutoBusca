@@ -27,13 +27,29 @@ async function search(query, fetchHtml) {
   ESTOQUE_LOCAL.forEach(car => {
     // Filtro do termo de busca
     if (queryWords.every(w => car.title.toLowerCase().includes(w))) {
-      results.push({
-        title: car.title,
+      
+      // --- Auto-Extraction of Year and KM ---
+      let extYear = null;
+      let extKm = null;
+      try {
+        const fullText = el.text().replace(/\s+/g, " ");
+        // Year: like 2019/2020 or 2019
+        const yearMatch = fullText.match(/\b(20\d{2}|19\d{2})(?:\/[12]0\d{2})?\b/);
+        if (yearMatch) extYear = yearMatch[0];
+        
+        // KM: like 45.000 km, 120 mil km, 45000km
+        const kmMatch = fullText.match(/\b(\d{1,3}(?:\.\d{3})*)\s*(?:km|kms|mil\s*km)\b/i);
+        if (kmMatch) {
+          let parsedKm = parseInt(kmMatch[1].replace(/\./g, ""), 10);
+          if (!isNaN(parsedKm)) extKm = new Intl.NumberFormat("pt-BR").format(parsedKm) + " km";
+        }
+      } catch (e) {}
+
+      results.push({ title: car.title,
         price: car.price,
         image_url: null, // Sem imagem disponível
         url: "#",
-        dealer_name: NAME
-      });
+        dealer_name: NAME, year: extYear, km: extKm });
     }
   });
 

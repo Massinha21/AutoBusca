@@ -181,8 +181,8 @@ module.exports = async function handler(req, res) {
           title: meta.title,
           price: display,
           price_value: value,
-          year: meta.year,
-          km: meta.km
+          year: car.year || meta.year,
+          km: car.km || meta.km
         };
       });
 
