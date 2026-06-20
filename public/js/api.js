@@ -14,27 +14,121 @@ const Api = (() => {
   // Em produção na Vercel, o caminho é o mesmo — a Vercel cuida do roteamento.
   const BASE_URL = "/api/buscar-carros";
 
-  ,
-      body: JSON.stringify({ action: "delete", id })
+  /**
+   * Chama a Serverless Function para buscar carros.
+   *
+   * @param {string}   query - Termo de busca (ex: "HB20")
+   * @param {string[]} urls  - Lista de URLs das revendas a pesquisar
+   * @returns {Promise<{
+   *   query:   string,
+   *   total:   number,
+   *   sites:   Array<{ name: string, status: string, count: number, error?: string }>,
+   *   results: Array<{ title, price, price_value, image_url, url, dealer_name }>
+   * }>}
+   * @throws {Error} Se a requisição falhar ou a API retornar erro
+   */
+  async function buscarCarros(query, signal = null) {
+    const url = `${BASE_URL}?query=${encodeURIComponent(query)}`;
+    const response = await fetch(url, {
+      method: "GET",
+      signal,
     });
+
+    // Se o servidor retornou um status de erro (4xx, 5xx), lança exceção
+    if (!response.ok) {
+      let errorMsg = `Erro ${response.status}: ${response.statusText}`;
+      try {
+        const errData = await response.json();
+        if (errData.error) errorMsg = errData.error;
+      } catch {
+        // Se o corpo não for JSON, usa a mensagem padrão
+      }
+      throw new Error(errorMsg);
+    }
+
+    // Converte o corpo da resposta de JSON para objeto JavaScript
+    const data = await response.json();
+    return data;
+  }
+
+  /**
+   * Conecta ao endpoint de SSE para buscar carros via streaming.
+   *
+   * @param {string}   query - Termo de busca (ex: "HB20")
+   * @param {Object}   callbacks - Objeto contendo callbacks: onInit, onSiteResult, onDone, onError
+   * @returns {EventSource} - Referência do EventSource para poder cancelar/fechar se necessário
+   */
+  function buscarCarrosStream(query, { onInit, onSiteResult, onDone, onError }) {
+    const url = `/api/buscar-carros-stream?query=${encodeURIComponent(query)}`;
+    const eventSource = new EventSource(url);
+
+    eventSource.addEventListener("init", (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (onInit) onInit(data);
+      } catch (err) {
+        console.error("Erro no parse do evento 'init':", err);
+      }
+    });
+
+    eventSource.addEventListener("site-result", (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (onSiteResult) onSiteResult(data);
+      } catch (err) {
+        console.error("Erro no parse do evento 'site-result':", err);
+      }
+    });
+
+    eventSource.addEventListener("done", (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (onDone) onDone(data);
+      } catch (err) {
+        console.error("Erro no parse do evento 'done':", err);
+      }
+      eventSource.close();
+    });
+
+    eventSource.onerror = (err) => {
+      if (onError) onError(err);
+      eventSource.close();
+    };
+
+    return eventSource;
+  }
+
+  /**
+   * Consulta o estoque geral consolidado com filtros e paginação.
+   */
+  async function buscarEstoqueGeral(filters) {
+    const params = new URLSearchParams();
+    for (const [key, val] of Object.entries(filters)) {
+      if (val !== undefined && val !== null && val !== "") {
+        params.append(key, val);
+      }
+    }
+    const response = await fetch(`/api/estoque-geral?${params.toString()}`);
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || "Erro ao remover alerta.");
+      throw new Error(err.error || "Erro ao consultar estoque geral.");
     }
     return response.json();
   }
 
   /**
-   * Obtém a série histórica de preços de um veículo.
+   * Dispara a sincronização de uma loja específica.
    */
-  async function obterHistoricoPreco(url, currentPrice) {
-    const response = await fetch(`/api/price-history?url=${encodeURIComponent(url)}&price=${currentPrice}`);
+  async function syncDealer(dealerName) {
+    const response = await fetch(`/api/sync-inventory?dealer=${encodeURIComponent(dealerName)}`);
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || "Erro ao obter histórico de preço.");
+      throw new Error(err.error || `Erro ao sincronizar loja ${dealerName}.`);
     }
     return response.json();
   }
+
+
 
   /**
    * Realiza login/cadastro na proxy de autenticação.
@@ -57,7 +151,7 @@ const Api = (() => {
     buscarCarrosStream,
     buscarEstoqueGeral,
     syncDealer,
-    obterHistoricoPreco,
+
     auth
   };
 })();
