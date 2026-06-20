@@ -1292,8 +1292,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ── Funções do Mini-mapa de Revendas ────────────────────────────────
   const DEALER_COORDINATES = {
-    "ZM Veículos": { lat: -21.2429666, lng: -47.8392581 },
-    "AMF Veículos": { lat: -21.2429666, lng: -47.8392581 },
+    "ZM Veículos": { lat: -21.2335, lng: -47.8545 },
+    "AMF Veículos": { lat: -21.2336, lng: -47.8546 },
     "Savinho Motors": { lat: -21.2046129, lng: -47.7752232 },
     "Ramiro Veículos": { lat: -21.1730, lng: -47.8020 },
     "GL Veículos": { lat: -21.2050721, lng: -47.7720125 },
