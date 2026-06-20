@@ -75,7 +75,7 @@ const UI = (() => {
    */
   function createCarCard(car, index, activeCompareUrls = new Set()) {
     const card = document.createElement("article");
-    card.className = "car-card";
+    card.className = "car-card" + (car.is_own_stock ? " is-own-stock" : "");
     card.setAttribute("aria-label", `${car.title} - ${car.price}`);
     // Atraso de animação para efeito cascata (máximo de 8 cards animados)
     card.style.animationDelay = `${Math.min(index, 7) * 0.045}s`;
@@ -150,6 +150,7 @@ const UI = (() => {
             onerror="this.onerror=null; this.src='${PLACEHOLDER_IMG}';"
           >
         </a>
+        ${car.is_own_stock ? '<span class="own-stock-badge">👑 Nosso Estoque</span>' : ''}
         <span class="dealer-badge">${escapeHtml(car.dealer_name || "Revenda")}</span>
       </div>
 

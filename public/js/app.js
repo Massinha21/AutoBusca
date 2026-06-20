@@ -124,6 +124,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const dealersSyncList = document.getElementById("dealers-sync-list");
   const filterBrand = document.getElementById("filter-brand");
 
+  // Meu Estoque Refs
+  const btnMyStock = document.getElementById("btn-my-stock");
+  const myStockModal = document.getElementById("my-stock-modal");
+  const btnCloseMyStock = document.getElementById("btn-close-my-stock");
+  const myStockListView = document.getElementById("my-stock-list-view");
+  const btnNewStockCar = document.getElementById("btn-new-stock-car");
+  const myStockListContainer = document.getElementById("my-stock-list-container");
+  const myStockFormView = document.getElementById("my-stock-form-view");
+  const btnBackStockList = document.getElementById("btn-back-stock-list");
+  const myStockForm = document.getElementById("my-stock-form");
+
   // ══════════════════════════════════════════════════════════════════════
   // INICIALIZAÇÃO
   // ══════════════════════════════════════════════════════════════════════
@@ -1658,6 +1669,33 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     btnCloseAdminSync.addEventListener("click", () => adminSyncModal.classList.add("hidden"));
 
+    // Meu Estoque
+    if (btnMyStock) {
+      btnMyStock.addEventListener("click", () => {
+        userDropdown.classList.add("hidden");
+        openMyStockModal();
+      });
+    }
+    if (btnCloseMyStock) btnCloseMyStock.addEventListener("click", () => myStockModal.classList.add("hidden"));
+    if (btnNewStockCar) {
+      btnNewStockCar.addEventListener("click", () => {
+        myStockForm.reset();
+        document.getElementById("stock-id").value = "";
+        document.getElementById("stock-form-title").textContent = "Novo Veículo";
+        myStockListView.classList.add("hidden");
+        myStockFormView.classList.remove("hidden");
+      });
+    }
+    if (btnBackStockList) {
+      btnBackStockList.addEventListener("click", () => {
+        myStockFormView.classList.add("hidden");
+        myStockListView.classList.remove("hidden");
+      });
+    }
+    if (myStockForm) {
+      myStockForm.addEventListener("submit", handleMyStockSubmit);
+    }
+
     // Inicialização da criação de alertas
     btnCloseCreateAlert.addEventListener("click", () => createAlertModal.classList.add("hidden"));
     createAlertModal.addEventListener("click", (e) => {
@@ -1987,6 +2025,133 @@ document.addEventListener("DOMContentLoaded", () => {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // GESTÃO DO MEU ESTOQUE
+  // ══════════════════════════════════════════════════════════════════════
+
+  async function openMyStockModal() {
+    myStockModal.classList.remove("hidden");
+    myStockFormView.classList.add("hidden");
+    myStockListView.classList.remove("hidden");
+    await loadMyStock();
+  }
+
+  async function loadMyStock() {
+    myStockListContainer.innerHTML = '<p>Carregando seu estoque...</p>';
+    try {
+      const res = await fetch("/api/meu-estoque");
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || "Erro ao carregar");
+      
+      if (!data.carros || data.carros.length === 0) {
+        myStockListContainer.innerHTML = '<p>Você ainda não tem veículos cadastrados no seu estoque.</p>';
+        return;
+      }
+
+      myStockListContainer.innerHTML = data.carros.map(c => `
+        <div style="border: 1px solid var(--border-color); padding: 10px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02);">
+          <div>
+            <strong>${c.marca} ${c.modelo} (${c.ano})</strong><br>
+            <small>R$ ${c.preco.toLocaleString('pt-BR', {minimumFractionDigits:2})} | ${c.fonte || 'Meu Estoque'}</small>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn-outline btn-edit-stock" data-id="${c.id}" style="padding: 5px 10px;">Editar</button>
+            <button class="btn-primary btn-delete-stock" data-id="${c.id}" style="padding: 5px 10px; background: var(--danger-color, #ef4444);">Excluir</button>
+          </div>
+        </div>
+      `).join("");
+
+      // Bind actions
+      document.querySelectorAll(".btn-edit-stock").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const carId = btn.getAttribute("data-id");
+          const car = data.carros.find(c => c.id === carId);
+          if (car) openEditStockForm(car);
+        });
+      });
+      document.querySelectorAll(".btn-delete-stock").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          if (confirm("Tem certeza que deseja inativar (excluir) este veículo?")) {
+            const carId = btn.getAttribute("data-id");
+            await deleteMyStockCar(carId);
+          }
+        });
+      });
+
+    } catch (err) {
+      myStockListContainer.innerHTML = `<p style="color: red;">Erro: ${err.message}</p>`;
+    }
+  }
+
+  function openEditStockForm(car) {
+    myStockForm.reset();
+    document.getElementById("stock-id").value = car.id;
+    document.getElementById("stock-marca").value = car.marca;
+    document.getElementById("stock-modelo").value = car.modelo;
+    document.getElementById("stock-ano").value = car.ano;
+    document.getElementById("stock-preco").value = car.preco;
+    document.getElementById("stock-km").value = car.quilometragem || "";
+    document.getElementById("stock-cor").value = car.cor || "";
+    document.getElementById("stock-img").value = car.imagem_url || "";
+    document.getElementById("stock-fonte").value = car.fonte || "";
+    document.getElementById("stock-url-ext").value = car.url_externo || "";
+    
+    document.getElementById("stock-form-title").textContent = "Editar Veículo";
+    myStockListView.classList.add("hidden");
+    myStockFormView.classList.remove("hidden");
+  }
+
+  async function handleMyStockSubmit(e) {
+    e.preventDefault();
+    const btnSubmit = myStockForm.querySelector("button[type='submit']");
+    btnSubmit.disabled = true;
+    btnSubmit.textContent = "Salvando...";
+
+    const payload = {
+      id: document.getElementById("stock-id").value || null,
+      marca: document.getElementById("stock-marca").value,
+      modelo: document.getElementById("stock-modelo").value,
+      ano: document.getElementById("stock-ano").value,
+      preco: document.getElementById("stock-preco").value,
+      quilometragem: document.getElementById("stock-km").value,
+      cor: document.getElementById("stock-cor").value,
+      imagem_url: document.getElementById("stock-img").value,
+      fonte: document.getElementById("stock-fonte").value,
+      url_externo: document.getElementById("stock-url-ext").value
+    };
+
+    try {
+      const res = await fetch("/api/meu-estoque", {
+        method: payload.id ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      
+      alert("Veículo salvo com sucesso!");
+      myStockFormView.classList.add("hidden");
+      myStockListView.classList.remove("hidden");
+      await loadMyStock();
+    } catch (err) {
+      alert("Erro ao salvar: " + err.message);
+    } finally {
+      btnSubmit.disabled = false;
+      btnSubmit.textContent = "Salvar Veículo";
+    }
+  }
+
+  async function deleteMyStockCar(id) {
+    try {
+      const res = await fetch(`/api/meu-estoque?id=${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      await loadMyStock();
+    } catch (err) {
+      alert("Erro ao excluir: " + err.message);
+    }
   }
 
   // ── Inicializa tudo ao carregar ─────────────────────────────────────

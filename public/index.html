@@ -58,6 +58,7 @@
             <span class="user-email" id="user-email-display">usuario@email.com</span>
             <hr>
             <button id="btn-show-alerts" class="dropdown-item">🔔 Meus Alertas</button>
+            <button id="btn-my-stock" class="dropdown-item hidden">🚗 Meu Estoque</button>
             <button id="btn-admin-sync" class="dropdown-item hidden">⚙️ Sincronizar</button>
             <button id="btn-logout" class="dropdown-item">🚪 Sair</button>
           </div>
@@ -496,6 +497,90 @@
         <div class="dealers-sync-list" id="dealers-sync-list">
           <!-- Preenchido via JS -->
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Meu Estoque (Gestão de Veículos Próprios) -->
+  <div id="my-stock-modal" class="compare-modal hidden" role="dialog" aria-modal="true" aria-labelledby="my-stock-title">
+    <div class="compare-modal-box my-stock-box" style="max-width: 800px; width: 95%;">
+      <div class="compare-modal-header">
+        <h2 id="my-stock-title">Gerenciar Meu Estoque</h2>
+        <button type="button" id="btn-close-my-stock" class="btn-close-compare" aria-label="Fechar modal">✕</button>
+      </div>
+      <div class="compare-modal-body">
+        
+        <!-- View: Lista de Carros -->
+        <div id="my-stock-list-view">
+          <div class="admin-sync-actions" style="justify-content: space-between;">
+            <p>Veículos da sua loja ou importados.</p>
+            <button type="button" id="btn-new-stock-car" class="btn-primary">+ Adicionar Veículo</button>
+          </div>
+          <div class="stock-list-container" id="my-stock-list-container" style="margin-top: 15px;">
+            <!-- Renderizado via JS -->
+          </div>
+        </div>
+
+        <!-- View: Formulário de Cadastro/Edição -->
+        <div id="my-stock-form-view" class="hidden">
+          <div class="admin-sync-actions">
+            <button type="button" id="btn-back-stock-list" class="btn-outline">← Voltar</button>
+            <h3 id="stock-form-title" style="margin: 0;">Novo Veículo</h3>
+          </div>
+          <form id="my-stock-form" class="auth-form" style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <input type="hidden" id="stock-id">
+            
+            <div class="form-group">
+              <label for="stock-marca">Marca *</label>
+              <input type="text" id="stock-marca" required placeholder="Ex: Chevrolet">
+            </div>
+            
+            <div class="form-group">
+              <label for="stock-modelo">Modelo *</label>
+              <input type="text" id="stock-modelo" required placeholder="Ex: Onix 1.0 Turbo">
+            </div>
+
+            <div class="form-group">
+              <label for="stock-ano">Ano *</label>
+              <input type="number" id="stock-ano" required placeholder="Ex: 2022">
+            </div>
+
+            <div class="form-group">
+              <label for="stock-preco">Preço (R$) *</label>
+              <input type="number" id="stock-preco" step="0.01" required placeholder="Ex: 75000">
+            </div>
+
+            <div class="form-group">
+              <label for="stock-km">Quilometragem</label>
+              <input type="number" id="stock-km" placeholder="Ex: 45000">
+            </div>
+
+            <div class="form-group">
+              <label for="stock-cor">Cor</label>
+              <input type="text" id="stock-cor" placeholder="Ex: Branco">
+            </div>
+
+            <div class="form-group" style="grid-column: span 2;">
+              <label for="stock-img">URL da Imagem</label>
+              <input type="url" id="stock-img" placeholder="https://.../foto.jpg">
+            </div>
+
+            <div class="form-group">
+              <label for="stock-fonte">Fonte (Loja)</label>
+              <input type="text" id="stock-fonte" value="Meu Estoque" placeholder="Ex: Facebook Marketplace">
+            </div>
+
+            <div class="form-group">
+              <label for="stock-url-ext">Link Original (Opcional)</label>
+              <input type="url" id="stock-url-ext" placeholder="https://facebook.com/...">
+            </div>
+
+            <div style="grid-column: span 2; margin-top: 10px;">
+              <button type="submit" class="btn-primary" style="width: 100%;">Salvar Veículo</button>
+            </div>
+          </form>
+        </div>
+
       </div>
     </div>
   </div>

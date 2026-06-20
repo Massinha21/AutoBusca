@@ -117,11 +117,52 @@ module.exports = async function handler(req, res) {
   }
 
   // Envia lista inicial de sites para configurar barra de progresso no front-end
+  const allSites = [{ name: "Meu Estoque" }, ...PARSERS.map(p => ({ name: p.name }))];
   sendSSE(res, "init", {
-    sites: PARSERS.map(p => ({ name: p.name }))
+    sites: allSites
   });
 
   const accumulatedResults = [];
+
+  // Busca instantânea no estoque próprio (tabela carros)
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from("carros")
+        .select("*")
+        .eq("ativo", true)
+        .or(`modelo.ilike.%${normalizedQuery}%,marca.ilike.%${normalizedQuery}%`);
+
+      if (!error && data && data.length > 0) {
+        const myCars = data.map(c => ({
+          url: c.url_externo || `#meu-estoque-${c.id}`,
+          title: `${c.marca} ${c.modelo}`,
+          price: `R$ ${c.preco.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+          price_value: c.preco,
+          image_url: c.imagem_url,
+          dealer_name: c.fonte || "Meu Estoque",
+          year: c.ano,
+          km: c.quilometragem,
+          brand: c.marca,
+          updated_at: c.updated_at,
+          is_own_stock: true
+        }));
+        accumulatedResults.push(...myCars);
+        sendSSE(res, "site-result", {
+          name: "Meu Estoque",
+          status: "success",
+          count: myCars.length,
+          results: myCars
+        });
+      } else {
+        sendSSE(res, "site-result", { name: "Meu Estoque", status: "empty", count: 0, results: [] });
+      }
+    } catch (err) {
+      sendSSE(res, "site-result", { name: "Meu Estoque", status: "error", error: err.message });
+    }
+  } else {
+    sendSSE(res, "site-result", { name: "Meu Estoque", status: "empty", count: 0, results: [] });
+  }
 
   // Executa cada parser e envia os resultados individualmente conforme terminam
   const promises = PARSERS.map(async (parser) => {

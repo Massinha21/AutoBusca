@@ -115,6 +115,43 @@ module.exports = async function handler(req, res) {
 
   // ── Cenário Online (Com Supabase) ─────────────────────────────────────────
   try {
+    // 1. Busca no Estoque Próprio (tabela carros)
+    let ownStockData = [];
+    if (offsetVal === 0) {
+      let carrosQuery = supabase.from("carros").select("*").eq("ativo", true);
+      
+      if (brand) carrosQuery = carrosQuery.ilike("marca", `%${brand}%`);
+      if (minPrice) carrosQuery = carrosQuery.gte("preco", parseFloat(minPrice));
+      if (maxPrice) carrosQuery = carrosQuery.lte("preco", parseFloat(maxPrice));
+      if (minYear) carrosQuery = carrosQuery.gte("ano", parseInt(minYear, 10));
+      if (maxYear) carrosQuery = carrosQuery.lte("ano", parseInt(maxYear, 10));
+      if (minKm) carrosQuery = carrosQuery.gte("quilometragem", parseInt(minKm, 10));
+      if (maxKm) carrosQuery = carrosQuery.lte("quilometragem", parseInt(maxKm, 10));
+      if (search) {
+        // Busca textual no modelo ou marca
+        carrosQuery = carrosQuery.or(`modelo.ilike.%${search}%,marca.ilike.%${search}%`);
+      }
+      
+      const { data: carrosResult, error: carrosError } = await carrosQuery;
+      if (!carrosError && carrosResult) {
+        // Mapear para o formato de vehicles
+        ownStockData = carrosResult.map(c => ({
+          url: c.url_externo || `#meu-estoque-${c.id}`,
+          title: `${c.marca} ${c.modelo}`,
+          price: `R$ ${c.preco.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+          price_value: c.preco,
+          image_url: c.imagem_url,
+          dealer_name: c.fonte || "Meu Estoque",
+          year: c.ano,
+          km: c.quilometragem,
+          brand: c.marca,
+          updated_at: c.updated_at,
+          is_own_stock: true // Flag para o frontend destacar
+        }));
+      }
+    }
+
+    // 2. Busca no Estoque Geral (tabela vehicles)
     let queryBuilder = supabase.from("vehicles").select("*", { count: "exact" });
 
     // Aplica filtros dinâmicos
@@ -166,9 +203,12 @@ module.exports = async function handler(req, res) {
 
     if (error) throw error;
 
+    // Mesclar resultados
+    const mergedResults = [...ownStockData, ...(data || [])];
+
     return res.status(200).json({
-      results: data || [],
-      total: count || 0,
+      results: mergedResults,
+      total: (count || 0) + ownStockData.length,
       hasMore: (offsetVal + (data ? data.length : 0)) < (count || 0)
     });
   } catch (err) {
