@@ -115,8 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnCloseAdminSync = document.getElementById("btn-close-admin-sync");
   const btnSyncAllDealers = document.getElementById("btn-sync-all-dealers");
   const dealersSyncList = document.getElementById("dealers-sync-list");
-  const filterBrand = document.getElementById("filter-brand");
-
+  
   // Meu Estoque Refs
   const btnMyStock = document.getElementById("btn-my-stock");
   const myStockModal = document.getElementById("my-stock-modal");
@@ -788,10 +787,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (filterYearMin) {
       filterYearMin.addEventListener("change", applyFilters);
     }
-    if (filterBrand) {
-      filterBrand.addEventListener("change", applyFilters);
-    }
-    if (btnClearFilters) {
+        if (btnClearFilters) {
       btnClearFilters.addEventListener("click", resetFilters);
     }
   }
@@ -970,10 +966,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (filterYearMin) {
       filterYearMin.value = "all";
     }
-    if (filterBrand) {
-      filterBrand.value = "all";
-    }
-    
+        
     if (filterDealers) {
       filterDealers.querySelectorAll("input[type='checkbox']").forEach(cb => {
         cb.checked = true;
