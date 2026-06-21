@@ -48,7 +48,7 @@ async function search(query, fetchHtml) {
       results.push({ title: car.title,
         price: car.price,
         image_url: null, // Sem imagem disponível
-        url: "#",
+        url: "https://www.zmveiculos.com.br",
         dealer_name: NAME, year: extYear, km: extKm });
     }
   });
