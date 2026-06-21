@@ -1,59 +1,95 @@
 // api/parsers/zmveiculos.js
-//
-// Estoque interno da loja ZM Veículos.
-// Estes carros são mockados conforme os do usuário e devem aparecer nos resultados.
+// Scraper real para a ZM Veículos.
+
+const cheerio = require("cheerio");
 
 const NAME = "ZM Veículos";
-
-const ESTOQUE_LOCAL = [
-  { title: "S10 2.4 MPFI EXECUTIVE 4X2 CD 8V FLEX 4P MANUAL", price: "R$ 67.900,00" },
-  { title: "SPIN 1.8 PREMIER 8V FLEX 4P AUTOMÁTICO", price: "R$ 79.900,00" },
-  { title: "PALIO 1.0 MPI FIRE 8V FLEX 4P MANUAL", price: "R$ 22.900,00" },
-  { title: "TORO 2.4 16V MULTIAIR FLEX VOLCANO AT9", price: "R$ 98.900,00" },
-  { title: "FIESTA 1.6 MPI HATCH 8V FLEX 4P MANUAL", price: "R$ 31.900,00" },
-  { title: "CIVIC 2.0 LXR 16V FLEX 4P AUTOMÁTICO", price: "R$ 75.900,00" },
-  { title: "HR-V 1.8 16V FLEX EX 4P AUTOMÁTICO", price: "R$ 84.900,00" },
-  { title: "HB20 1.0 COMFORT PLUS 12V FLEX 4P MANUAL", price: "R$ 43.900,00" },
-  { title: "GLA 200 1.6 CGI ADVANCE 16V TURBO FLEX 4P AUTOMÁTICO", price: "R$ 98.900,00" },
-  { title: "COOPER 1.5 12V TURBO GASOLINA 4P AUTOMÁTICO", price: "R$ 85.900,00" },
-  { title: "LOGAN 1.6 EXPRESSION 16V FLEX 4P AUTOMÁTICO", price: "R$ 28.900,00" },
-  { title: "TIGUAN 2.0 350 TSI GASOLINA ALLSPACE R-LINE 4MOTION DSG", price: "R$ 148.900,00" }
-];
+const BASE_URL = "https://zmveiculos.com.br";
 
 async function search(query, fetchHtml) {
-  const queryWords = query.toLowerCase().split(/\s+/);
-  const results = [];
+  try {
+    // A ZM Veículos não usa query string padrão (como ?q=), a busca é via POST ou outra página.
+    // Vamos baixar o estoque principal e filtrar localmente, pois o site lista muitos de uma vez.
+    const url = `${BASE_URL}/estoque`;
+    const html = await fetchHtml(url);
+    const $ = cheerio.load(html);
 
-  ESTOQUE_LOCAL.forEach(car => {
-    // Filtro do termo de busca
-    if (queryWords.every(w => car.title.toLowerCase().includes(w))) {
-      
-      // --- Auto-Extraction of Year and KM ---
-      let extYear = null;
-      let extKm = null;
-      try {
-        const fullText = el.text().replace(/\s+/g, " ");
-        // Year: like 2019/2020 or 2019
-        const yearMatch = fullText.match(/\b(20\d{2}|19\d{2})(?:\/[12]0\d{2})?\b/);
-        if (yearMatch) extYear = yearMatch[0];
-        
-        // KM: like 45.000 km, 120 mil km, 45000km
-        const kmMatch = fullText.match(/\b(\d{1,3}(?:\.\d{3})*)\s*(?:km|kms|mil\s*km)\b/i);
-        if (kmMatch) {
-          let parsedKm = parseInt(kmMatch[1].replace(/\./g, ""), 10);
-          if (!isNaN(parsedKm)) extKm = new Intl.NumberFormat("pt-BR").format(parsedKm) + " km";
+    const results = [];
+    const queryWords = query.toLowerCase().split(/\s+/);
+
+    $('td').each((i, el) => {
+      const htmlText = $(el).html() || "";
+      if (htmlText.includes('R$') && htmlText.includes('Valor:')) {
+        const carContainer = $(el).closest('table');
+        if (carContainer.length > 0) {
+           const titleEl = carContainer.find('.texto14_azul_negrito, .texto14_preto_negrito, .texto16_preto_negrito').first();
+           const title = titleEl.text().trim();
+           if (!title) return;
+
+           // Filtro do termo de busca no título
+           if (!queryWords.every(w => title.toLowerCase().includes(w))) {
+             return;
+           }
+
+           const priceMatch = carContainer.text().match(/R\$\s*[\d\.]+,00/);
+           
+           // Extraindo URL do atributo onclick
+           let link = null;
+           const tdWithClick = carContainer.find('td[onclick*="document.location.href"]');
+           if (tdWithClick.length > 0) {
+             const onclick = tdWithClick.attr('onclick');
+             const urlMatch = onclick.match(/href='([^']+)'/);
+             if (urlMatch) {
+               link = urlMatch[1];
+             }
+           }
+           
+           // Extraindo imagem
+           let img = carContainer.find('img').attr('src');
+           if (img && !img.startsWith('http')) {
+              img = `${BASE_URL}${img}`;
+           }
+           
+           // Extraindo Ano e KM
+           let extYear = null;
+           let extKm = null;
+           const textBlue = carContainer.find('.texto12_azul_normal').text();
+           const yearMatch = textBlue.match(/\b(20\d{2}|19\d{2})(?:\/[12]0\d{2})?\b/);
+           if (yearMatch) extYear = yearMatch[0];
+
+           // km extraction by reading the entire html text block
+           try {
+             const fullText = carContainer.text().replace(/\s+/g, " ");
+             const kmMatch = fullText.match(/\b(\d{1,3}(?:\.\d{3})*)\s*(?:km|kms|mil\s*km)\b/i);
+             if (kmMatch) {
+               let parsedKm = parseInt(kmMatch[1].replace(/\./g, ""), 10);
+               if (!isNaN(parsedKm)) extKm = new Intl.NumberFormat("pt-BR").format(parsedKm) + " km";
+             }
+           } catch (e) {}
+
+           if(title && priceMatch) {
+             results.push({
+               title,
+               price: priceMatch[0],
+               url: link ? `${BASE_URL}${link}` : BASE_URL,
+               image_url: img || null,
+               dealer_name: NAME,
+               year: extYear,
+               km: extKm // O site não parece mostrar KM na grade principal, mas tentamos
+             });
+           }
         }
-      } catch (e) {}
+      }
+    });
 
-      results.push({ title: car.title,
-        price: car.price,
-        image_url: null, // Sem imagem disponível
-        url: "https://www.zmveiculos.com.br",
-        dealer_name: NAME, year: extYear, km: extKm });
-    }
-  });
+    // Remove duplicados pelo URL
+    const uniqueResults = [...new Map(results.map(v => [v.url, v])).values()];
 
-  return results;
+    return uniqueResults;
+  } catch (err) {
+    console.error(`[${NAME}] Erro ao buscar carros:`, err.message);
+    return []; // Retorna array vazio em caso de erro para não quebrar o Promise.all
+  }
 }
 
 module.exports = { search, name: NAME };
