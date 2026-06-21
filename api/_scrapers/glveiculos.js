@@ -42,7 +42,8 @@ async function search(query, fetchHtml) {
         if (yearMatch) extYear = yearMatch[0];
         
         // KM: like 45.000 km, 120 mil km, 45000km
-        const kmMatch = fullText.match(/\b(\d{1,3}(?:\.\d{3})*)\s*(?:km|kms|mil\s*km)\b/i);
+        let kmMatch = fullText.match(/\b(\d{1,3}(?:\.\d{3})+|\d+)\s*(?:km|kms|mil\s*km)\b/i);
+        if (!kmMatch) kmMatch = fullText.match(/\bkm[:\-\s]*(\d{1,3}(?:\.\d{3})+|\d+)\b/i);
         if (kmMatch) {
           let parsedKm = parseInt(kmMatch[1].replace(/\./g, ""), 10);
           if (!isNaN(parsedKm)) extKm = new Intl.NumberFormat("pt-BR").format(parsedKm) + " km";
