@@ -3033,7 +3033,7 @@ input[type="range"]:hover + .range-bubble {
 
 /* Nova Logo */
 .main-logo-img {
-  max-height: 45px;
+  max-height: 85px;
   width: auto;
   object-fit: contain;
 }
