@@ -4,7 +4,7 @@
 // Responsável por prover cache offline para o App Shell (estáticos) e habilitar PWA.
 //
 
-const CACHE_NAME = "autobusca-cache-v7";
+const CACHE_NAME = "autobusca-cache-v8";
 
 const PRECACHE_ASSETS = [
   "/",
