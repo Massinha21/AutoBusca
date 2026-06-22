@@ -1306,9 +1306,115 @@ input, textarea, select { font-family: var(--font-body); }
 
 /* Responsividade de Detalhes */
 @media (max-width: 900px) {
-  .search-results-layout {
-    display: block;
+  .details-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
   }
+  .details-title {
+    font-size: 1.85rem;
+  }
+  .details-price-value {
+    font-size: 2.25rem;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   16. BUSCA POR IMAGEM (UPLOAD DE FOTO)
+   ═══════════════════════════════════════════════════════════ */
+.upload-img-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.35rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, transform 0.2s;
+  height: 100%;
+}
+
+.upload-img-btn:hover {
+  color: var(--accent);
+  transform: scale(1.15);
+}
+
+.image-analysis-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(9, 13, 24, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.3s ease;
+}
+
+.image-analysis-overlay.hidden {
+  display: none !important;
+}
+
+.analysis-spinner-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  box-shadow: var(--shadow-card);
+  text-align: center;
+  max-width: 320px;
+  width: 90%;
+  animation: scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.analysis-spinner-box .spinner {
+  width: 50px;
+  height: 50px;
+  border: 4.5px solid rgba(99, 102, 241, 0.15);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.analysis-spinner-box p {
+  font-family: var(--font-heading);
+  font-size: 1.12rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes scaleUp {
+  from { transform: scale(0.9); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   17. PAINEL DE FILTROS LATERAIS (UX & INTERFACE)
+   ═══════════════════════════════════════════════════════════ */
+.search-results-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  width: 100%;
+  align-items: start;
+  margin-bottom: 3rem;
+}
 
 .results-grid-wrapper {
   min-width: 0; /* Previne estouros no grid */

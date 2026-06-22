@@ -31,8 +31,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const searchForm     = document.getElementById("search-form");
   const searchInput    = document.getElementById("search-input");
   const searchBtn      = document.getElementById("search-btn");
-  
-  
+  const uploadImgBtn   = document.getElementById("upload-img-btn");
+  const imageUploadInput = document.getElementById("image-upload-input");
   const imageAnalysisOverlay = document.getElementById("image-analysis-overlay");
   const themeToggle    = document.getElementById("theme-toggle");
   const urlsPanel      = document.getElementById("urls-panel");
@@ -71,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnViewGrid = document.getElementById("btn-view-grid");
   const btnViewList = document.getElementById("btn-view-list");
   const resultsGrid = document.getElementById("results-grid");
-  
+  const voiceSearchBtn = document.getElementById("voice-search-btn");
 
   // Elementos do Mini-mapa
   const mapPanel = document.getElementById("map-panel");
@@ -177,8 +177,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Busca por imagem
     if (uploadImgBtn && imageUploadInput) {
-      uploadImgBtn.addEventListener("click", () => imageUploadInput.click());
-      imageUploadInput.addEventListener("change", handleImageUploadChange);
+      if(uploadImgBtn) uploadImgBtn.addEventListener("click", () => imageUploadInput.click());
+      if(imageUploadInput) imageUploadInput.addEventListener("change", handleImageUploadChange);
     }
 
     // Alternância de tema
@@ -757,9 +757,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ── Painel de Filtros Laterais ──────────────────────────────────────
   let sidebarOverlay = null;
 
-  function initFilters() {
-    // Filtros removidos
-  }
+  function initFilters() { return; }
 
   function closeMobileFilters() {
     if (filtersSidebar) filtersSidebar.classList.remove("is-open");
@@ -810,9 +808,25 @@ document.addEventListener("DOMContentLoaded", () => {
     updateBubble(filterKmRange, document.getElementById('km-bubble'), false);
   }
 
-  function populateFiltersData(cars) {
-    // Filtros removidos
+  function populateFiltersData(cars) { return; }
+
+  function applyFilters() {
+    if (allCars.length === 0) return;
+    const enriched = enrichCarsWithFipe(allCars);
+    const sorted = sortCars(enriched, sortSelect ? sortSelect.value : 'default');
+    if (sorted.length === 0) {
+      if(UI && UI.renderNoResultsFiltered) UI.renderNoResultsFiltered();
+      updateMapMarkersState(new Set());
+    } else {
+      if(UI && UI.renderCars) UI.renderCars(sorted, activeCompareUrls);
+      updateMapMarkersState(new Set(allCars.map(c => c.dealer_name)));
+    }
+    if(UI && UI.updateResultsCount) UI.updateResultsCount(sorted.length);
   }
+
+  function resetFilters() { applyFilters(); }
+
+  function resetFiltersUI() { return; }
 
   // ── Funções do Modo Comparação Lado a Lado ──────────────────────────
   function handleCompareCheckboxChange(e) {
@@ -1022,7 +1036,7 @@ document.addEventListener("DOMContentLoaded", () => {
     speechRecognition.continuous = false;
     speechRecognition.interimResults = false;
 
-    voiceSearchBtn.addEventListener("click", () => {
+    if(voiceSearchBtn) voiceSearchBtn.addEventListener("click", () => {
       if (isListeningVoice) {
         speechRecognition.stop();
       } else {
@@ -1098,7 +1112,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    btnLoginTrigger.addEventListener("click", () => {
+    if(btnLoginTrigger) btnLoginTrigger.addEventListener("click", () => {
       if (currentUser) {
         userDropdown.classList.toggle("hidden");
       } else {
