@@ -12,13 +12,7 @@
 const UI = (() => {
   // ── Imagem de fallback (SVG inline) usada quando o carro não tem foto ──
   // Evita ícones quebrados no lugar das imagens
-  const PLACEHOLDER_IMG = `data:image/svg+xml,${encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200">
-      <rect width="300" height="200" fill="#1e2a40"/>
-      <text x="150" y="85"  text-anchor="middle" fill="#4a5568" font-family="sans-serif" font-size="42">🚗</text>
-      <text x="150" y="125" text-anchor="middle" fill="#4a5568" font-family="sans-serif" font-size="14">Sem foto disponível</text>
-    </svg>
-  `)}`;
+  const PLACEHOLDER_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2352525b'><path d='M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z'/></svg>";
 
   // ── Referências dos elementos do DOM ──
   // Todas obtidas aqui uma única vez para melhor performance
@@ -59,8 +53,20 @@ const UI = (() => {
       return;
     }
 
+    let bestDiscountPercent = -1;
+    let bestCarIndex = -1;
+    cars.forEach((car, i) => {
+      if (car.comparison && car.comparison.diff < 0) {
+        const pct = Math.abs(car.comparison.percent);
+        if (pct > bestDiscountPercent && pct > 2) { // At least 2% to be "best deal"
+          bestDiscountPercent = pct;
+          bestCarIndex = i;
+        }
+      }
+    });
+
     cars.forEach((car, index) => {
-      const card = createCarCard(car, index, activeCompareUrls);
+      const card = createCarCard(car, index, activeCompareUrls, index === bestCarIndex);
       grid.appendChild(card);
     });
   }
@@ -73,12 +79,18 @@ const UI = (() => {
    * @param {Set} activeCompareUrls - Set de URLs selecionadas
    * @returns {HTMLElement}
    */
-  function createCarCard(car, index, activeCompareUrls = new Set()) {
+  function createCarCard(car, index, activeCompareUrls = new Set(), isBestDeal = false) {
     const card = document.createElement("article");
     card.className = "car-card" + (car.is_own_stock ? " is-own-stock" : "");
     card.setAttribute("aria-label", `${car.title} - ${car.price}`);
     // Atraso de animação para efeito cascata (máximo de 8 cards animados)
     card.style.animationDelay = `${Math.min(index, 7) * 0.045}s`;
+
+    
+    let bestDealHtml = "";
+    if (isBestDeal) {
+      bestDealHtml = `<div class="best-deal-badge">🌟 Melhor Preço</div>`;
+    }
 
     const imgSrc = car.image_url && car.image_url.startsWith("http")
       ? car.image_url
@@ -230,6 +242,33 @@ const UI = (() => {
   /**
    * Mostra mensagem "Nenhum resultado encontrado".
    */
+  
+  /** Helper para cores de Revendas */
+  const dealerColors = [
+    "#ef4444", "#f97316", "#f59e0b", "#84cc16", "#22c55e",
+    "#10b981", "#14b8a6", "#06b6d4", "#0ea5e9", "#3b82f6",
+    "#6366f1", "#8b5cf6", "#a855f7", "#d946ef", "#ec4899",
+    "#f43f5e", "#fb7185", "#38bdf8", "#34d399", "#a3e635"
+  ];
+
+  function getDealerColor(dealerName) {
+    let hash = 0;
+    for (let i = 0; i < dealerName.length; i++) {
+      hash = dealerName.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    hash = Math.abs(hash);
+    return dealerColors[hash % dealerColors.length];
+  }
+
+  function getDealerInitials(dealerName) {
+    const words = dealerName.replace(/veiculos|veículos|motors|multimarcas|autos|automóveis|car/ig, "").trim().split(' ');
+    if (words.length === 1) return words[0].substring(0, 2).toUpperCase();
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
+
+  window.getDealerColor = getDealerColor;
+  window.getDealerInitials = getDealerInitials;
+
   function renderNoResults() {
     const grid = els.resultsGrid();
     grid.innerHTML = `
@@ -323,12 +362,15 @@ const UI = (() => {
     let item = document.getElementById(itemId);
 
     if (!item) {
-      // Cria o item da loja pela primeira vez
       item = document.createElement("div");
       item.id = itemId;
       item.className = "store-status-item";
+      const iconHtml = window.getDealerColor ? `<span class="dealer-icon" style="background-color: ${window.getDealerColor(storeName)}; width: 16px; height: 16px; font-size: 0.55rem; margin-right: 0.3rem;">${window.getDealerInitials(storeName)}</span>` : '';
       item.innerHTML = `
-        <span class="store-name">${escapeHtml(storeName)}</span>
+        <div style="display: flex; align-items: center;">
+          ${iconHtml}
+          <span class="store-name">${escapeHtml(storeName)}</span>
+        </div>
         <span class="store-badge"></span>
       `;
       listEl.appendChild(item);
@@ -336,6 +378,12 @@ const UI = (() => {
 
     const badge = item.querySelector(".store-badge");
     badge.className = `store-badge ${status}`;
+
+    // Semantic text colors for badges
+    if (status === 'success') badge.style.color = 'var(--accent-green)';
+    else if (status === 'error') badge.style.color = 'var(--accent-red)';
+    else if (status === 'searching') badge.style.color = 'var(--accent)';
+    else badge.style.color = 'var(--text-muted)';
 
     const icons = { waiting: "⏸", searching: "⏳", success: "✅", error: "❌" };
     badge.textContent = `${icons[status] || ""} ${label}`;

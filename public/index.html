@@ -12,7 +12,7 @@
   <!-- Fontes Google -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 
   <!-- Estilos -->
   <link rel="stylesheet" href="style.css">
@@ -202,16 +202,16 @@
 
 
             <!-- Filtro por Revenda -->
-            <div class="filter-group">
-              <h4>Revendas</h4>
+            <details class="filter-group" open>
+              <summary><h4>Revendas</h4></summary>
               <div class="filter-options" id="filter-dealers">
                 <!-- Checkboxes inseridos dinamicamente pelo JS -->
               </div>
-            </div>
+            </details>
             
             <!-- Filtro por Preço -->
-            <div class="filter-group">
-              <div class="filter-group-header">
+            <details class="filter-group" open>
+              <summary><div class="filter-group-header">
                 <h4>Preço Máximo</h4>
                 <span id="price-filter-value">Qualquer valor</span>
               </div>
@@ -222,30 +222,32 @@
                   <span id="price-max-label">R$ 300mil+</span>
                 </div>
               </div>
-            </div>
+            </details>
 
             <!-- Filtro por Ano -->
-            <div class="filter-group">
-              <h4>Ano Mínimo</h4>
-              <select id="filter-year-min" class="filter-select">
+            <details class="filter-group" open>
+              <summary><h4>Ano Mínimo</h4></summary>
+              <select id="filter-year-min" class="filter-select" style="margin-top: 1rem;">
                 <option value="all">Qualquer ano</option>
               </select>
-            </div>
+            </details>
 
             <!-- Filtro por KM Máximo -->
-            <div class="filter-group">
-              <div class="filter-group-header">
-                <h4>Quilometragem Máxima</h4>
-                <span id="km-filter-value">Qualquer KM</span>
-              </div>
-              <div class="km-range-wrapper">
+            <details class="filter-group" open>
+              <summary>
+                <div class="filter-group-header">
+                  <h4>Quilometragem Máxima</h4>
+                  <span id="km-filter-value">Qualquer KM</span>
+                </div>
+              </summary>
+              <div class="km-range-wrapper" style="margin-top: 1rem;">
                 <input type="range" id="filter-km-range" min="0" max="200000" step="10000" value="200000">
                 <div class="range-labels">
                   <span id="km-min-label">0 km</span>
                   <span id="km-max-label">200mil km+</span>
                 </div>
               </div>
-            </div>
+            </details>
 
             <!-- Botão de Limpar Filtros -->
             <button type="button" id="btn-clear-filters" class="btn-clear-filters">

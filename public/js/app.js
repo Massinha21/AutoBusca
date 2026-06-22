@@ -848,6 +848,7 @@ document.addEventListener("DOMContentLoaded", () => {
       label.className = "filter-checkbox-label";
       label.innerHTML = `
         <input type="checkbox" value="${dealer}" ${isChecked ? "checked" : ""}>
+        <span class="dealer-icon" style="background-color: ${window.getDealerColor ? window.getDealerColor(dealer) : '#333'}">${window.getDealerInitials ? window.getDealerInitials(dealer) : dealer[0]}</span>
         <span>${dealer}</span>
       `;
       filterDealers.appendChild(label);
