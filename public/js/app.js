@@ -521,7 +521,6 @@ document.addEventListener("DOMContentLoaded", () => {
       UI.renderNoResults();
       if (filtersSidebar) filtersSidebar.classList.add("hidden");
       if (btnToggleFilters) btnToggleFilters.classList.add("hidden");
-      updateMapMarkersState(new Set());
     } else {
       populateFiltersData(cars);
       resetFiltersUI();
@@ -529,7 +528,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const sorted = sortCars(enriched, sortSelect.value);
       UI.renderCars(sorted, activeCompareUrls);
       UI.showResultsControls(cars.length);
-      updateMapMarkersState(new Set(cars.map(c => c.dealer_name)));
     }
   }
 
@@ -846,10 +844,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const sorted = sortCars(enriched, sortSelect ? sortSelect.value : 'default');
     if (sorted.length === 0) {
       if(UI && UI.renderNoResultsFiltered) UI.renderNoResultsFiltered();
-      updateMapMarkersState(new Set());
     } else {
       if(UI && UI.renderCars) UI.renderCars(sorted, activeCompareUrls);
-      updateMapMarkersState(new Set(allCars.map(c => c.dealer_name)));
     }
     if(UI && UI.updateResultsCount) UI.updateResultsCount(sorted.length);
   }
