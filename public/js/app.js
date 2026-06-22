@@ -805,16 +805,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   
   function updateBubble(inputEl, bubbleEl, isCurrency) {
-    if (!bubbleEl) return;
-    const val = parseInt(inputEl.value);
-    const min = parseInt(inputEl.min) || 0;
-    const max = parseInt(inputEl.max);
-    const percent = ((val - min) / (max - min));
+    if (!bubbleEl || !inputEl) return;
+    const val = Number(inputEl.value) || 0;
+    const min = Number(inputEl.min) || 0;
+    const max = Number(inputEl.max) || 1;
+    let percent = (val - min) / (max - min);
+    if (isNaN(percent)) percent = 1;
+    percent = Math.max(0, Math.min(1, percent));
     
-    const thumbWidth = 16; 
-    const offset = `calc(${percent * 100}% - ${percent * thumbWidth}px + ${thumbWidth / 2}px)`;
-    
-    bubbleEl.style.left = offset;
+    // Calcula o offset exato considerando o tamanho da bolinha (16px aproximado)
+    bubbleEl.style.left = `calc(${percent * 100}% + (${8 - percent * 16}px))`;
     
     if (val === max) {
       bubbleEl.textContent = "Qualquer";
@@ -884,26 +884,21 @@ document.addEventListener("DOMContentLoaded", () => {
       label.querySelector("input").addEventListener("change", applyFilters);
     });
 
-    // 2. Popula Anos
-    const years = [];
-    cars.forEach(c => {
-      if (c.year) {
-        const match = c.year.toString().match(/\d{4}/);
-        if (match) {
-          const y = parseInt(match[0]);
-          if (!isNaN(y)) years.push(y);
-        }
-      }
-    });
-    const uniqueYears = [...new Set(years)].sort((a, b) => b - a);
-
-    const previousYear = filterYearMin.value;
+    // 2. Popula Anos de forma sequencial do mais novo até 2000
+    const currentYear = new Date().getFullYear();
+    const allYears = [];
+    for (let y = currentYear + 1; y >= 2000; y--) {
+      allYears.push(y);
+    }
+    
+    const currentSelectedYear = filterYearMin.value;
     filterYearMin.innerHTML = '<option value="all">Qualquer ano</option>';
-    uniqueYears.forEach(y => {
+    
+    allYears.forEach(y => {
       const option = document.createElement("option");
       option.value = y;
-      option.textContent = `${y} ou mais novo`;
-      if (y.toString() === previousYear) {
+      option.textContent = y;
+      if (currentSelectedYear === y.toString()) {
         option.selected = true;
       }
       filterYearMin.appendChild(option);
