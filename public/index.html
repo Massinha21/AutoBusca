@@ -160,9 +160,7 @@
           Encontramos <strong id="total-results-count">0</strong> veículos correspondentes.
         </div>
         <div class="controls-right">
-          <button type="button" id="btn-toggle-filters" class="btn-toggle-filters" aria-label="Filtrar resultados">
-            ⚙️ Filtros
-          </button>
+          
           <div class="view-toggle-wrapper" role="group" aria-label="Modo de visualização">
             <button type="button" id="btn-view-grid" class="view-toggle-btn active" title="Visualização em Grade" aria-label="Visualização em Grade">
               ⬜
@@ -193,70 +191,7 @@
       <!-- ═══════ SEÇÃO DE LAYOUT DE RESULTADOS E FILTROS ═══════ -->
       <div class="search-results-layout">
         <!-- Painel de Filtros Laterais -->
-        <aside class="filters-sidebar hidden" id="filters-sidebar" aria-label="Filtros de veículos">
-          <div class="filters-sidebar-header">
-            <h3>Filtros Avançados</h3>
-            <button type="button" id="btn-close-filters" class="btn-close-filters" aria-label="Fechar filtros">✕</button>
-          </div>
-          <div class="filters-sidebar-body">
-
-
-            <!-- Filtro por Revenda -->
-            <details class="filter-group" open>
-              <summary><h4>Revendas</h4></summary>
-              <div class="filter-options" id="filter-dealers">
-                <!-- Checkboxes inseridos dinamicamente pelo JS -->
-              </div>
-            </details>
-            
-            <!-- Filtro por Preço -->
-            <details class="filter-group" open>
-              <summary><div class="filter-group-header">
-                <h4>Preço Máximo</h4>
-                <span id="price-filter-value">Qualquer valor</span>
-              </div>
-              <div class="price-range-wrapper">
-                <input type="range" id="filter-price-range" min="0" max="300000" step="1000" value="300000">
-                <output class="range-bubble" id="price-bubble">Qualquer</output>
-                <div class="range-labels">
-                  <span id="price-min-label">R$ 0</span>
-                  <span id="price-max-label">R$ 300mil+</span>
-                </div>
-              </div>
-            </details>
-
-            <!-- Filtro por Ano -->
-            <details class="filter-group" open>
-              <summary><h4>Ano Mínimo</h4></summary>
-              <select id="filter-year-min" class="filter-select" style="margin-top: 1rem;">
-                <option value="all">Qualquer ano</option>
-              </select>
-            </details>
-
-            <!-- Filtro por KM Máximo -->
-            <details class="filter-group" open>
-              <summary>
-                <div class="filter-group-header">
-                  <h4>Quilometragem Máxima</h4>
-                  <span id="km-filter-value">Qualquer KM</span>
-                </div>
-              </summary>
-              <div class="km-range-wrapper" style="margin-top: 2.5rem; position: relative;">
-                <input type="range" id="filter-km-range" min="0" max="200000" step="1000" value="200000">
-                <output class="range-bubble" id="km-bubble">Qualquer</output>
-                <div class="range-labels">
-                  <span id="km-min-label">0 km</span>
-                  <span id="km-max-label">200mil km+</span>
-                </div>
-              </div>
-            </details>
-
-            <!-- Botão de Limpar Filtros -->
-            <button type="button" id="btn-clear-filters" class="btn-clear-filters">
-              Limpar Filtros
-            </button>
-          </div>
-        </aside>
+        
 
         <!-- Grid de Resultados -->
         <div class="results-grid-wrapper">
