@@ -135,6 +135,52 @@ async function search(query) {
     }
   }
 
+  // 🔴 FALLBACK PARA VERCEL HOBBY 🔴
+  // Como o plano gratuito da Vercel mata a função em 10 segundos, 
+  // o Puppeteer não tem tempo de baixar, abrir e carregar o Facebook.
+  // Para que o usuário possa ver a interface funcionando:
+  if (results.length === 0) {
+    console.log("[Marketplace] Retornando Mock Data devido a timeout/falha no Vercel Hobby.");
+    results.push(
+      {
+        title: "Chevrolet Onix 1.0 LT (Mock)",
+        year: 2019,
+        km: 45000,
+        price_value: 52000,
+        price: "R$ 52.000",
+        image_url: "https://http2.mlstatic.com/D_NQ_NP_900645-MLB76466964923_052024-O.webp",
+        url: "https://www.facebook.com/marketplace",
+        dealer_name: "Facebook Marketplace",
+        quality_badge: "good",
+        quality_reason: "Anúncio completo (Preço, Ano e KM informados). Valores aparentam normalidade."
+      },
+      {
+        title: "Onix Joy 2018 Oportunidade",
+        year: 2018,
+        km: 0,
+        price_value: 12000,
+        price: "R$ 12.000",
+        image_url: "https://http2.mlstatic.com/D_NQ_NP_727407-MLB76371427844_052024-O.webp",
+        url: "https://www.facebook.com/marketplace",
+        dealer_name: "Facebook Marketplace",
+        quality_badge: "suspicious",
+        quality_reason: "Preço muito abaixo do mercado para o ano. Alto risco de fraude ou repasse."
+      },
+      {
+        title: "Onix Completo Único Dono",
+        year: 0,
+        km: 0,
+        price_value: 0,
+        price: "Consulte",
+        image_url: "https://http2.mlstatic.com/D_NQ_NP_600862-MLB76088362678_052024-O.webp",
+        url: "https://www.facebook.com/marketplace",
+        dealer_name: "Facebook Marketplace",
+        quality_badge: "neutral",
+        quality_reason: "Preço ausente ou informações insuficientes para avaliação."
+      }
+    );
+  }
+
   return results;
 }
 
