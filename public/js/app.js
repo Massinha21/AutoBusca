@@ -31,8 +31,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const searchForm     = document.getElementById("search-form");
   const searchInput    = document.getElementById("search-input");
   const searchBtn      = document.getElementById("search-btn");
-  const uploadImgBtn   = document.getElementById("upload-img-btn");
-  const imageUploadInput = document.getElementById("image-upload-input");
+  
+  
   const imageAnalysisOverlay = document.getElementById("image-analysis-overlay");
   const themeToggle    = document.getElementById("theme-toggle");
   const urlsPanel      = document.getElementById("urls-panel");
@@ -71,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnViewGrid = document.getElementById("btn-view-grid");
   const btnViewList = document.getElementById("btn-view-list");
   const resultsGrid = document.getElementById("results-grid");
-  const voiceSearchBtn = document.getElementById("voice-search-btn");
+  
 
   // Elementos do Mini-mapa
   const mapPanel = document.getElementById("map-panel");
