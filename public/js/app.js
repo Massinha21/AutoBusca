@@ -780,9 +780,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // Eventos de alteração dos inputs de filtros
     if (filterPriceRange) {
       filterPriceRange.addEventListener("input", handlePriceFilterChange);
+      filterPriceRange.addEventListener("change", applyFilters);
     }
     if (filterKmRange) {
       filterKmRange.addEventListener("input", handleKmFilterChange);
+      filterKmRange.addEventListener("change", applyFilters);
     }
     if (filterYearMin) {
       filterYearMin.addEventListener("change", applyFilters);
@@ -805,7 +807,6 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       priceFilterValue.textContent = `Até ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(val)}`;
     }
-    applyFilters();
   }
 
   function handleKmFilterChange() {
@@ -816,7 +817,6 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       kmFilterValue.textContent = `Até ${val.toLocaleString("pt-BR")} km`;
     }
-    applyFilters();
   }
 
   function populateFiltersData(cars) {
@@ -860,7 +860,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const years = [];
     cars.forEach(c => {
       if (c.year) {
-        const match = c.year.match(/\d{4}/);
+        const match = c.year.toString().match(/\d{4}/);
         if (match) {
           const y = parseInt(match[0]);
           if (!isNaN(y)) years.push(y);
@@ -918,7 +918,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // Filtro de ano
       if (minYear) {
         if (car.year) {
-          const match = car.year.match(/\d{4}/);
+          const match = car.year.toString().match(/\d{4}/);
           const carYear = match ? parseInt(match[0]) : null;
           if (carYear && carYear < minYear) {
             return false;
