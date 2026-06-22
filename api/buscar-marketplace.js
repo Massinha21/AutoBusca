@@ -1,5 +1,3 @@
-const facebookMarketplaceScraper = require('./_scrapers/facebook-marketplace');
-
 module.exports = async (req, res) => {
   // CORS configuration
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -23,13 +21,12 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Parâmetro query é obrigatório' });
     }
 
-    console.log(`[API] Iniciando busca no Facebook Marketplace para: "${query}"`);
-    const startTime = Date.now();
+    console.log(`[API] Retornando Mock Data do Facebook Marketplace para: "${query}"`);
 
-    // Mock fallback caso estoure o tempo
+    // Mock data direto para evitar limites de timeout e build da Vercel
     const mockData = [
       {
-        title: "Chevrolet Onix 1.0 LT (Mock)",
+        title: "Chevrolet Onix 1.0 LT (Simulação Vercel)",
         year: 2019,
         km: 45000,
         price_value: 52000,
@@ -66,31 +63,15 @@ module.exports = async (req, res) => {
       }
     ];
 
-    // Chama o scraper com timeout de 7 segundos (Vercel mata com 10s)
-    const timeoutPromise = new Promise((resolve) => {
-      setTimeout(() => {
-        console.log("[API] Timeout de 7s atingido. Retornando Mock Data para evitar erro 504 na Vercel.");
-        resolve(mockData);
-      }, 7000);
-    });
-
-    const scraperPromise = facebookMarketplaceScraper.search(query);
-
-    let results = await Promise.race([scraperPromise, timeoutPromise]);
-    
-    if (!results || results.length === 0) {
-      results = mockData;
-    }
-
-    const elapsed = Date.now() - startTime;
-    console.log(`[API] Busca concluída em ${elapsed}ms. Itens encontrados: ${results.length}`);
+    // Simula um delay de busca de 2 segundos para dar tempo de ver os skeletons
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     return res.status(200).json({
       success: true,
       query,
-      count: results.length,
-      results,
-      elapsed_ms: elapsed
+      count: mockData.length,
+      results: mockData,
+      elapsed_ms: 2000
     });
 
   } catch (err) {
