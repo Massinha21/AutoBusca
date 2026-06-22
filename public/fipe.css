@@ -93,7 +93,7 @@
 
 .fipe-tab.active {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-content);
   box-shadow: 0 4px 12px var(--accent-glow);
 }
 
@@ -135,7 +135,7 @@
   width: 20px;
   height: 20px;
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-content);
   border-radius: 50%;
   font-size: 0.7rem;
   font-weight: 800;
@@ -219,7 +219,7 @@
   align-items: center;
   gap: 0.6rem;
   background: linear-gradient(135deg, var(--accent), var(--accent-hover));
-  color: #fff;
+  color: var(--accent-content);
   border: none;
   font-family: var(--font-heading);
   font-size: 1rem;
@@ -422,7 +422,7 @@
   align-items: center;
   gap: 0.4rem;
   background: linear-gradient(135deg, var(--accent), var(--accent-hover));
-  color: #fff;
+  color: var(--accent-content);
   font-family: var(--font-heading);
   font-size: 0.85rem;
   font-weight: 700;
