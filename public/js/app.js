@@ -792,6 +792,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (btnClearFilters) {
       btnClearFilters.addEventListener("click", resetFilters);
     }
+    
+    // Initial bubble positioning
+    if (filterPriceRange) updateBubble(filterPriceRange, document.getElementById('price-bubble'), true);
+    if (filterKmRange) updateBubble(filterKmRange, document.getElementById('km-bubble'), false);
   }
 
   function closeMobileFilters() {
@@ -826,11 +830,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const maxVal = parseInt(filterPriceRange.max);
     if (val === maxVal) {
       priceFilterValue.textContent = "Qualquer valor";
-    
-    updateBubble(filterPriceRange, document.getElementById('price-bubble'), true);
-  } else {
+    } else {
       priceFilterValue.textContent = `Até ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(val)}`;
     }
+    updateBubble(filterPriceRange, document.getElementById('price-bubble'), true);
   }
 
   function handleKmFilterChange() {
@@ -838,11 +841,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const maxVal = parseInt(filterKmRange.max);
     if (val === maxVal) {
       kmFilterValue.textContent = "Qualquer KM";
-    
-    updateBubble(filterKmRange, document.getElementById('km-bubble'), false);
-  } else {
+    } else {
       kmFilterValue.textContent = `Até ${val.toLocaleString("pt-BR")} km`;
     }
+    updateBubble(filterKmRange, document.getElementById('km-bubble'), false);
   }
 
   function populateFiltersData(cars) {
