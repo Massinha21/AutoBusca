@@ -1707,4 +1707,4 @@ document.addEventListener("DOMContentLoaded", () => {
       alert("Falha ao buscar no Marketplace. Tente novamente.");
     }
   }
-\n});
+});
