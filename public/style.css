@@ -3029,3 +3029,11 @@ input[type="range"]:active + .range-bubble,
 input[type="range"]:hover + .range-bubble {
   opacity: 1;
 }
+
+
+/* Nova Logo */
+.main-logo-img {
+  max-height: 45px;
+  width: auto;
+  object-fit: contain;
+}
