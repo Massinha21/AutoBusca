@@ -171,7 +171,33 @@ document.addEventListener("DOMContentLoaded", () => {
   // BINDING DE EVENTOS
   // ══════════════════════════════════════════════════════════════════════
 
+  
+  // ══════════════════════════════════════════════════════════════════════
+  // ESTADO DA ABA ATIVA
+  // ══════════════════════════════════════════════════════════════════════
+  let currentSearchMode = "revendas"; // 'revendas' | 'marketplace'
+
+  function bindTabs() {
+    const tabRevendas = document.getElementById("tab-revendas");
+    const tabMarketplace = document.getElementById("tab-marketplace");
+
+    if (tabRevendas && tabMarketplace) {
+      tabRevendas.addEventListener("click", () => {
+        currentSearchMode = "revendas";
+        tabRevendas.classList.add("active");
+        tabMarketplace.classList.remove("active");
+      });
+
+      tabMarketplace.addEventListener("click", () => {
+        currentSearchMode = "marketplace";
+        tabMarketplace.classList.add("active");
+        tabRevendas.classList.remove("active");
+      });
+    }
+  }
+
   function bindEvents() {
+    bindTabs();
     // Formulário de busca
     searchForm.addEventListener("submit", handleSearchSubmit);
 
@@ -290,7 +316,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const urlsText = urlsTextarea.value;
     const urls = Storage.parseUrlText(urlsText);
 
-    await runSearch(query, urls);
+    if (currentSearchMode === "revendas") {
+      await runSearch(query, urls);
+    } else {
+      await runMarketplaceSearch(query);
+    }
   }
 
   /**

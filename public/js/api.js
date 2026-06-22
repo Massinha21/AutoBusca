@@ -146,7 +146,33 @@ const Api = (() => {
     return response.json();
   }
 
+  
+  /**
+   * Busca carros no Facebook Marketplace.
+   *
+   * @param {string} query - Termo de busca
+   */
+  async function buscarMarketplace(query) {
+    const response = await fetch("/api/buscar-marketplace", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query })
+    });
+
+    if (!response.ok) {
+      let errorMsg = `Erro ${response.status}: ${response.statusText}`;
+      try {
+        const errData = await response.json();
+        if (errData.error) errorMsg = errData.error;
+      } catch { }
+      throw new Error(errorMsg);
+    }
+
+    return await response.json();
+  }
+
   return {
+    buscarMarketplace,
     buscarCarros,
     buscarCarrosStream,
     buscarEstoqueGeral,

@@ -130,6 +130,30 @@ const UI = (() => {
       `;
     }
 
+    // Badge de Qualidade (Marketplace)
+    let qualityBadgeHtml = "";
+    if (car.quality_badge) {
+      let badgeClass = "";
+      let badgeLabel = "";
+      
+      if (car.quality_badge === "good") {
+        badgeClass = "badge-good";
+        badgeLabel = "✅ Bom";
+      } else if (car.quality_badge === "neutral") {
+        badgeClass = "badge-neutral";
+        badgeLabel = "⚠️ Neutro";
+      } else if (car.quality_badge === "suspicious") {
+        badgeClass = "badge-suspicious";
+        badgeLabel = "❌ Suspeito";
+      }
+
+      qualityBadgeHtml = `
+        <div class="quality-badge ${badgeClass}" title="${escapeHtml(car.quality_reason || '')}">
+          ${badgeLabel}
+        </div>
+      `;
+    }
+
     let fipePriceParam = "";
     if (car.comparison && car.price_value) {
       const fipePriceVal = car.price_value - car.comparison.diff;
