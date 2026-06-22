@@ -2992,3 +2992,40 @@ summary h4 { margin: 0 !important; }
     grid-template-columns: repeat(4, 1fr) !important;
   }
 }
+
+
+/* --- Range Bubble --- */
+.price-range-wrapper, .km-range-wrapper {
+  position: relative;
+}
+.range-bubble {
+  position: absolute;
+  top: -30px;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: var(--accent-content);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  white-space: nowrap;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  z-index: 20;
+}
+.range-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 4px 4px 0;
+  border-style: solid;
+  border-color: var(--accent) transparent transparent transparent;
+}
+input[type="range"]:active + .range-bubble,
+input[type="range"]:hover + .range-bubble {
+  opacity: 1;
+}

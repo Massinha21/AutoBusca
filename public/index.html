@@ -217,6 +217,7 @@
               </div>
               <div class="price-range-wrapper">
                 <input type="range" id="filter-price-range" min="0" max="300000" step="1000" value="300000">
+                <output class="range-bubble" id="price-bubble">Qualquer</output>
                 <div class="range-labels">
                   <span id="price-min-label">R$ 0</span>
                   <span id="price-max-label">R$ 300mil+</span>
@@ -240,8 +241,9 @@
                   <span id="km-filter-value">Qualquer KM</span>
                 </div>
               </summary>
-              <div class="km-range-wrapper" style="margin-top: 1rem;">
+              <div class="km-range-wrapper" style="margin-top: 2.5rem; position: relative;">
                 <input type="range" id="filter-km-range" min="0" max="200000" step="1000" value="200000">
+                <output class="range-bubble" id="km-bubble">Qualquer</output>
                 <div class="range-labels">
                   <span id="km-min-label">0 km</span>
                   <span id="km-max-label">200mil km+</span>

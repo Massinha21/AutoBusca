@@ -799,12 +799,36 @@ document.addEventListener("DOMContentLoaded", () => {
     if (sidebarOverlay) sidebarOverlay.classList.remove("active");
   }
 
+  
+  function updateBubble(inputEl, bubbleEl, isCurrency) {
+    if (!bubbleEl) return;
+    const val = parseInt(inputEl.value);
+    const min = parseInt(inputEl.min) || 0;
+    const max = parseInt(inputEl.max);
+    const percent = ((val - min) / (max - min));
+    
+    const thumbWidth = 16; 
+    const offset = `calc(${percent * 100}% - ${percent * thumbWidth}px + ${thumbWidth / 2}px)`;
+    
+    bubbleEl.style.left = offset;
+    
+    if (val === max) {
+      bubbleEl.textContent = "Qualquer";
+    } else {
+      bubbleEl.textContent = isCurrency 
+        ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(val)
+        : val.toLocaleString("pt-BR") + " km";
+    }
+  }
+
   function handlePriceFilterChange() {
     const val = parseInt(filterPriceRange.value);
     const maxVal = parseInt(filterPriceRange.max);
     if (val === maxVal) {
       priceFilterValue.textContent = "Qualquer valor";
-    } else {
+    
+    updateBubble(filterPriceRange, document.getElementById('price-bubble'), true);
+  } else {
       priceFilterValue.textContent = `Até ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(val)}`;
     }
   }
@@ -814,7 +838,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const maxVal = parseInt(filterKmRange.max);
     if (val === maxVal) {
       kmFilterValue.textContent = "Qualquer KM";
-    } else {
+    
+    updateBubble(filterKmRange, document.getElementById('km-bubble'), false);
+  } else {
       kmFilterValue.textContent = `Até ${val.toLocaleString("pt-BR")} km`;
     }
   }
