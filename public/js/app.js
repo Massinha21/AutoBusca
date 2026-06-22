@@ -289,7 +289,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Scroll para Infinite Scroll (Grupo 4)
-    window.addEventListener("scroll", handleScroll);
+    // window.addEventListener("scroll", handleScroll);
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -1684,4 +1684,27 @@ document.addEventListener("DOMContentLoaded", () => {
   // ── Inicializa tudo ao carregar ─────────────────────────────────────
   init();
 
-});
+
+  async function runMarketplaceSearch(query) {
+    if (isSearching) return;
+    setSearchLoading(true);
+    UI.showSkeletons(6);
+    UI.hideResultsControls();
+
+    allCars = [];
+    clearCompareSelection();
+
+    try {
+      // Usa o novo método do api.js
+      const data = await Api.buscarMarketplace(query);
+      allCars = data.results || [];
+      
+      // Como o Marketplace não é streaming de dezenas de sites, terminamos a busca aqui
+      finishSearch(allCars, query);
+    } catch (err) {
+      console.error("[AutoBusca] Erro no marketplace:", err);
+      finishSearch([], query);
+      alert("Falha ao buscar no Marketplace. Tente novamente.");
+    }
+  }
+\n});
