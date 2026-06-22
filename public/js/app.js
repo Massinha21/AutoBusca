@@ -813,15 +813,15 @@ document.addEventListener("DOMContentLoaded", () => {
     if (isNaN(percent)) percent = 1;
     percent = Math.max(0, Math.min(1, percent));
     
-    // Calcula o offset exato considerando o tamanho da bolinha (16px aproximado)
-    bubbleEl.style.left = `calc(${percent * 100}% + (${8 - percent * 16}px))`;
+    bubbleEl.style.left = (percent * 100) + "%";
+    bubbleEl.style.marginLeft = (8 - percent * 16) + "px";
     
     if (val === max) {
       bubbleEl.textContent = "Qualquer";
     } else {
       bubbleEl.textContent = isCurrency 
         ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(val)
-        : val.toLocaleString("pt-BR") + " km";
+        : val.toLocaleString("pt-BR") + (isCurrency ? "" : " km");
     }
   }
 
