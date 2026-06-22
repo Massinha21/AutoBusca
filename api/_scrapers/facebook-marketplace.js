@@ -1,5 +1,5 @@
 const puppeteer = require('puppeteer-core');
-const chromium = require('@sparticuz/chromium');
+const chromium = require('@sparticuz/chromium').default || require('@sparticuz/chromium');
 
 /**
  * Realiza o scraping do Facebook Marketplace para um dado termo de busca.
@@ -11,7 +11,16 @@ async function search(query) {
   const results = [];
 
   try {
-    const executablePath = await chromium.executablePath();
+    // Determina se estamos na Vercel ou ambiente local
+    const isLocal = !process.env.VERCEL;
+    
+    // O pacote do Sparticuz Chromium precisa ser baixado dinamicamente na Vercel
+    // porque ele ultrapassa o limite de 50MB para funções Serverless.
+    const chromiumPack = isLocal
+      ? null
+      : "https://github.com/Sparticuz/chromium/releases/download/v121.0.0/chromium-v121.0.0-pack.tar";
+
+    const executablePath = await chromium.executablePath(chromiumPack);
     console.log("[Marketplace] Executable path:", executablePath);
 
     browser = await puppeteer.launch({
@@ -31,14 +40,13 @@ async function search(query) {
     });
 
     const encodedQuery = encodeURIComponent(query);
-    // URL apontando para Ribeirão Preto (108341642533031)
     const searchUrl = `https://www.facebook.com/marketplace/108341642533031/search/?query=${encodedQuery}`;
     
     console.log(`[Marketplace] Acessando URL: ${searchUrl}`);
     await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 15000 });
 
     // Aguarda carregar algum card de item (links do marketplace)
-    await page.waitForSelector('a[href*="/marketplace/item/"]', { timeout: 5000 }).catch(() => console.log("[Marketplace] Timeout aguardando seletor."));
+    await page.waitForSelector('a[href*="/marketplace/item/"]', { timeout: 8000 }).catch(() => console.log("[Marketplace] Timeout aguardando seletor."));
 
     // Executa a extração no contexto da página
     const items = await page.evaluate(() => {
@@ -48,15 +56,12 @@ async function search(query) {
 
       links.forEach(a => {
         const link = a.href;
-        // Evita duplicados
         if (seenLinks.has(link)) return;
         seenLinks.add(link);
 
-        // Busca pela imagem
         const imgEl = a.querySelector('img');
         const imagem = imgEl ? imgEl.src : null;
 
-        // O texto do anúncio geralmente está no mesmo contêiner 'a'
         const textContent = a.innerText || "";
         const lines = textContent.split('\\n').map(l => l.trim()).filter(l => l.length > 0);
         
@@ -65,10 +70,8 @@ async function search(query) {
         let local = "";
         let km = null;
 
-        // Tenta inferir os dados a partir das linhas
         lines.forEach(line => {
           if (line.includes('R$') || /^\\d{1,3}(\\.\\d{3})*$/.test(line)) {
-            // Limpa o preço
             const cleanPrice = parseInt(line.replace(/[^\\d]/g, ''));
             if (cleanPrice > 1000) preco = cleanPrice;
           } else if (line.toLowerCase().includes('km') || line.includes('mil km')) {
@@ -81,22 +84,13 @@ async function search(query) {
           }
         });
 
-        // Extrai o ano do título (se houver)
         let ano = null;
         const yearMatch = modelo.match(/\\b(19\\d{2}|20\\d{2})\\b/);
         if (yearMatch) {
           ano = parseInt(yearMatch[0]);
         }
 
-        parsedItems.push({
-          modelo,
-          ano,
-          km,
-          preco,
-          imagem,
-          link,
-          local
-        });
+        parsedItems.push({ modelo, ano, km, preco, imagem, link, local });
       });
 
       return parsedItems;
@@ -104,9 +98,7 @@ async function search(query) {
 
     console.log(`[Marketplace] Extraídos ${items.length} itens brutos.`);
 
-    // Formata e adiciona Lógica de Inteligência (Qualidade do anúncio)
     items.forEach(item => {
-      // 1. Checa Preço
       let quality_badge = "neutral";
       let quality_reason = "Anúncio dentro dos padrões normais.";
 
@@ -121,7 +113,6 @@ async function search(query) {
         quality_reason = "Anúncio completo (Preço, Ano e KM informados). Valores aparentam normalidade.";
       }
 
-      // Converte para o padrão que o frontend auto-busca espera
       results.push({
         title: item.modelo,
         year: item.ano || 0,
