@@ -849,7 +849,17 @@ document.addEventListener("DOMContentLoaded", () => {
     if (sorted.length === 0) {
       if(UI && UI.renderNoResultsFiltered) UI.renderNoResultsFiltered();
     } else {
-      if(UI && UI.renderCars) UI.renderCars(sorted, activeCompareUrls);
+      if(UI && UI.renderCars) {
+        UI.renderCars(sorted, activeCompareUrls);
+        if (window.FipeClient) {
+          sorted.forEach(car => {
+            if (!car.fipe_price_str) {
+              const cardElement = document.querySelector(`.car-card[data-url="${car.url}"]`);
+              if (cardElement) window.FipeClient.enrichCarUI(car, cardElement);
+            }
+          });
+        }
+      }
     }
     if(UI && UI.updateResultsCount) UI.updateResultsCount(sorted.length);
   }

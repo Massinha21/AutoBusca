@@ -82,6 +82,7 @@ const UI = (() => {
   function createCarCard(car, index, activeCompareUrls = new Set(), isBestDeal = false) {
     const card = document.createElement("article");
     card.className = "car-card" + (car.is_own_stock ? " is-own-stock" : "");
+    card.setAttribute('data-url', car.url);
     card.setAttribute("aria-label", `${car.title} - ${car.price}`);
     // Atraso de animação para efeito cascata (máximo de 8 cards animados)
     card.style.animationDelay = `${Math.min(index, 7) * 0.045}s`;
