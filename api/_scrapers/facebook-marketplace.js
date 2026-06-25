@@ -139,7 +139,11 @@ async function search(query) {
           const html = await res.text();
           const match = html.match(/<meta property="og:description" content="([^"]+)"/);
           if (match) {
-            item.descricao = match[1];
+            let desc = match[1];
+            // Decode HTML entities (ex: &#xe3; -> ã, &#xfa; -> ú)
+            desc = desc.replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+            desc = desc.replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(dec));
+            item.descricao = desc;
           } else {
             item.descricao = "";
           }

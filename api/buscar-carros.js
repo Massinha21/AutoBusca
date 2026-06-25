@@ -162,20 +162,24 @@ module.exports = async function handler(req, res) {
         };
       });
 
-      // Busca FIPE para os carros das revendas de forma assíncrona
-      cars = await Promise.all(cars.map(async car => {
-        if (car.year && car.year > 1990) {
-          const brandName = term.split(' ')[0] || car.title.split(' ')[0];
-          const fipeData = await getFipePrice(brandName, car.title, car.version, car.year);
-          if (fipeData) {
-            car.fipe_price_str = fipeData.priceStr;
-            car.fipe_model_name = fipeData.fipeModel;
-            const numValue = parseFloat(fipeData.priceStr.replace(/[R$\s\.]/g, '').replace(',', '.'));
-            car.fipe_price_value = numValue;
+      // Busca FIPE para os carros das revendas em lotes (throttling) para evitar IP Ban
+      const { getFipePrice } = require('./_scrapers/fipe-matcher');
+      const chunkSize = 3;
+      for (let i = 0; i < cars.length; i += chunkSize) {
+        const chunk = cars.slice(i, i + chunkSize);
+        await Promise.all(chunk.map(async car => {
+          if (car.year && car.year > 1990) {
+            const brandName = term.split(' ')[0] || car.title.split(' ')[0];
+            const fipeData = await getFipePrice(brandName, car.title, car.version, car.year);
+            if (fipeData) {
+              car.fipe_price_str = fipeData.priceStr;
+              car.fipe_model_name = fipeData.fipeModel;
+              const numValue = parseFloat(fipeData.priceStr.replace(/[R$\s\.]/g, '').replace(',', '.'));
+              car.fipe_price_value = numValue;
+            }
           }
-        }
-        return car;
-      }));
+        }));
+      }
 
       sites.push({ name: parser.name, status: "success", count: cars.length });
       allResults.push(...cars);

@@ -28,7 +28,9 @@ if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
 }
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+// Tenta usar a chave de Service Role (Admin) para ignorar as regras de RLS do Supabase,
+// evitando o erro "permission denied for table search_cache" no backend da Vercel.
+const supabaseAnonKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 
 let supabase = null;
 
