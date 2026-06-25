@@ -31,7 +31,30 @@ async function getTabelaReferencia() {
   return 310; // Fallback para Junho de 2024 caso falhe
 }
 
+// Mutex global para serializar requisições à FIPE e evitar erro 429
+let fipeMutex = Promise.resolve();
+
 async function getFipePrice(brandName, modelName, version, year) {
+  let release;
+  const acquire = new Promise(r => { release = r; });
+  const currentMutex = fipeMutex;
+  
+  // O próximo a pedir o mutex vai ter que esperar o nosso acquire resolver
+  fipeMutex = currentMutex.then(() => acquire).catch(() => acquire);
+  
+  // Aguarda a nossa vez (aguarda o mutex anterior terminar)
+  await currentMutex;
+  
+  try {
+    return await _getFipePrice(brandName, modelName, version, year);
+  } finally {
+    // Adiciona um pequeno delay de 100ms antes de liberar para o próximo
+    await new Promise(r => setTimeout(r, 100));
+    release();
+  }
+}
+
+async function _getFipePrice(brandName, modelName, version, year) {
   try {
     const tabelaRef = await getTabelaReferencia();
 

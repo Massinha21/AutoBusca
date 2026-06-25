@@ -202,9 +202,13 @@ module.exports = async function handler(req, res) {
       for (let i = 0; i < cars.length; i += chunkSize) {
         const chunk = cars.slice(i, i + chunkSize);
         await Promise.all(chunk.map(async car => {
-          if (car.year && car.year > 1990) {
+          const yearStr = String(car.year || "");
+          const yearMatch = yearStr.match(/\d{4}/);
+          const parsedYear = yearMatch ? parseInt(yearMatch[0]) : 0;
+          
+          if (parsedYear > 1990) {
             const brandName = term.split(' ')[0] || car.title.split(' ')[0];
-            const fipeData = await getFipePrice(brandName, car.title, car.version, car.year);
+            const fipeData = await getFipePrice(brandName, car.title, car.version, parsedYear);
             if (fipeData) {
               car.fipe_price_str = fipeData.priceStr;
               car.fipe_model_name = fipeData.fipeModel;

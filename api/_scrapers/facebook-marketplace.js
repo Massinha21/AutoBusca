@@ -137,6 +137,15 @@ async function search(query) {
         try {
           const res = await fetch(item.link);
           const html = await res.text();
+          
+          // Nova tentativa: Buscar "44.600 km rodados" direto no corpo do HTML retornado
+          if (!item.km) {
+            const kmHtmlMatch = html.match(/(\d{1,3}(?:\.\d{3})*)\s*km\s*rodados/i);
+            if (kmHtmlMatch) {
+              item.km = parseInt(kmHtmlMatch[1].replace(/[^\d]/g, ''));
+            }
+          }
+
           const match = html.match(/<meta property="og:description" content="([^"]+)"/);
           if (match) {
             let desc = match[1];
@@ -155,14 +164,50 @@ async function search(query) {
       return parsedItems;
     });
 
-    console.log(`[Marketplace] Extraídos ${items.length} itens reais.`);
+    console.log(`[Marketplace] Extraídos ${items.length} itens reais na busca inicial.`);
 
+    console.log(`[Marketplace] Iniciando Deep Scrape para capturar o KM real diretamente de cada anúncio...`);
+    const maxConcurrent = 4; // Limite de abas simultâneas para não travar o PC
+    for (let i = 0; i < items.length; i += maxConcurrent) {
+      const chunk = items.slice(i, i + maxConcurrent);
+      await Promise.all(chunk.map(async (item) => {
+        if (!item.link || !item.link.startsWith('http')) return;
+        const newPage = await browser.newPage();
+        try {
+          await newPage.goto(item.link, { waitUntil: 'domcontentloaded', timeout: 10000 });
+          await new Promise(r => setTimeout(r, 1500)); // Aguarda o React renderizar o "Sobre este veículo"
+          const kmDeep = await newPage.evaluate(() => {
+            const text = document.body.innerText;
+            // Padrão 1: "114.000 km rodados"
+            const match = text.match(/([\d\.]+)\s*km\s*rodados/i);
+            if (match) return parseInt(match[1].replace(/[^\d]/g, ''));
+            // Padrão 2: "Quilometragem: 114.000"
+            const match2 = text.match(/Quilometragem:\s*([\d\.]+)/i);
+            if (match2) return parseInt(match2[1].replace(/[^\d]/g, ''));
+            return null;
+          });
+          if (kmDeep) {
+             item.km = kmDeep; // Substitui como padrão absoluto
+          }
+        } catch (e) {
+          // Ignora erros de timeout de abas individuais
+        } finally {
+          await newPage.close();
+        }
+      }));
+    }
+    console.log(`[Marketplace] Deep Scrape finalizado! Renderizando resultados...`);
     items.forEach(item => {
       let quality_badge = "neutral";
       let quality_reason = "Anúncio dentro dos padrões normais.";
 
       const descLower = (item.descricao || "").toLowerCase();
-      const is_salvage = /sinistro|leil[ãa]o|batida|recuperado|remarcado/i.test(descLower);
+      // Remove frases que NEGAM o leilão para não cair em falsos positivos
+      const cleanDesc = descLower
+        .replace(/sem\s+(nenhuma\s+)?(passagem\s+por\s+)?(sinistro|leil[ãa]o|batida|recuperado|remarcado)/ig, '')
+        .replace(/(nem|não|nao|nunca)\s+(é\s+de\s+|tem\s+passagem\s+por\s+|teve\s+passagem\s+por\s+|foi\s+de\s+|passou\s+por\s+)?(sinistro|leil[ãa]o|batida|recuperado|remarcado)/ig, '')
+        .replace(/(sem|ou|nem)\s+(qualquer\s+)?(sinistro|leil[ãa]o|batida|recuperado|remarcado)/ig, '');
+      const is_salvage = /sinistro|leil[ãa]o|batida|recuperado|remarcado/i.test(cleanDesc);
       
       // Tenta extrair a versão comum do título ou da descrição
       const versionRegex = /\b(XEI|GLI|ALTIS|COMFORTLINE|HIGHLINE|TRENDLINE|TRACK|LT|LTZ|PREMIER|RS|SENSE|VISION|EVOLUTION|DIAMOND|PLATINUM|VOLCANO|FREEDOM|ENDURANCE|RANCH|ULTRA|ACTIVE|ALLURE|GRIFFE|LIKE|EX|EXL|TOURING|ELX|HLX|TREKKING|WAY|SPORTING|HGT|ADVANCE|PRECISION|DRIVE|LIMITED|LONGITUDE|SPORT|TRAILHAWK|SV|SL|UNIQUE|EXCLUSIVE|V-DRIVE)\b/i;

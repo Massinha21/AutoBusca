@@ -233,9 +233,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Ordenação dos resultados
     sortSelect.addEventListener("change", () => {
       if (allCars.length > 0) {
-        const enriched = enrichCarsWithFipe(allCars);
-        const sorted = sortCars(enriched, sortSelect.value);
-        UI.renderCars(sorted, activeCompareUrls);
+        applyFilters();
       }
     });
 
@@ -480,9 +478,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (data.status === "success" && data.results && data.results.length > 0) {
           allCars = allCars.concat(data.results);
-          const enriched = enrichCarsWithFipe(allCars);
-          const sorted = sortCars(enriched, sortSelect.value);
-          UI.renderCars(sorted, activeCompareUrls);
+          applyFilters();
           UI.showResultsControls(allCars.length);
         }
       },
@@ -779,9 +775,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Re-renderiza a lista atual sem os badges de FIPE
     if (allCars.length > 0) {
-      const enriched = enrichCarsWithFipe(allCars);
-      const sorted = sortCars(enriched, sortSelect.value);
-      UI.renderCars(sorted, activeCompareUrls);
+      applyFilters();
     }
   }
 
@@ -844,7 +838,14 @@ document.addEventListener("DOMContentLoaded", () => {
   function applyFilters() {
     if (allCars.length === 0) return;
     const enriched = enrichCarsWithFipe(allCars);
-    const sorted = sortCars(enriched, sortSelect ? sortSelect.value : 'default');
+    
+    let filtered = enriched;
+    const qualitySelect = document.getElementById("quality-select");
+    if (qualitySelect && qualitySelect.value === "safe") {
+      filtered = filtered.filter(car => car.quality_badge !== "suspicious" && !car.is_salvage);
+    }
+    
+    const sorted = sortCars(filtered, sortSelect ? sortSelect.value : 'default');
     if (sorted.length === 0) {
       if(UI && UI.renderNoResultsFiltered) UI.renderNoResultsFiltered();
     } else {

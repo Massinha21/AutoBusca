@@ -1,0 +1,162 @@
+[
+  {
+    "lines": [
+      "R$28.500",
+      "2011 Ford Fiesta",
+      "Ribeirão Preto, SP"
+    ],
+    "loopLog": [
+      {
+        "line": "R$28.500",
+        "cleanLine": "R$28.500",
+        "cleanPrice": 28500,
+        "action": "SET_PRICE"
+      },
+      {
+        "line": "2011 Ford Fiesta",
+        "cleanLine": "2011FORDFIESTA",
+        "action": "SET_MODELO"
+      },
+      {
+        "line": "Ribeirão Preto, SP",
+        "cleanLine": "RIBEIRÃOPRETO,SP",
+        "action": "SET_LOCAL"
+      }
+    ],
+    "final": {
+      "preco": 28500,
+      "modelo": "2011 Ford Fiesta",
+      "local": "Ribeirão Preto, SP",
+      "km": null
+    }
+  },
+  {
+    "lines": [
+      "R$16.000",
+      "2008 Chevrolet outro",
+      "Sertãozinho, SP"
+    ],
+    "loopLog": [
+      {
+        "line": "R$16.000",
+        "cleanLine": "R$16.000",
+        "cleanPrice": 16000,
+        "action": "SET_PRICE"
+      },
+      {
+        "line": "2008 Chevrolet outro",
+        "cleanLine": "2008CHEVROLETOUTRO",
+        "action": "SET_MODELO"
+      },
+      {
+        "line": "Sertãozinho, SP",
+        "cleanLine": "SERTÃOZINHO,SP",
+        "action": "SET_LOCAL"
+      }
+    ],
+    "final": {
+      "preco": 16000,
+      "modelo": "2008 Chevrolet outro",
+      "local": "Sertãozinho, SP",
+      "km": null
+    }
+  },
+  {
+    "lines": [
+      "R$41.000",
+      "2008 Honda Civic",
+      "Ribeirão Preto, SP"
+    ],
+    "loopLog": [
+      {
+        "line": "R$41.000",
+        "cleanLine": "R$41.000",
+        "cleanPrice": 41000,
+        "action": "SET_PRICE"
+      },
+      {
+        "line": "2008 Honda Civic",
+        "cleanLine": "2008HONDACIVIC",
+        "action": "SET_MODELO"
+      },
+      {
+        "line": "Ribeirão Preto, SP",
+        "cleanLine": "RIBEIRÃOPRETO,SP",
+        "action": "SET_LOCAL"
+      }
+    ],
+    "final": {
+      "preco": 41000,
+      "modelo": "2008 Honda Civic",
+      "local": "Ribeirão Preto, SP",
+      "km": null
+    }
+  },
+  {
+    "lines": [
+      "R$10",
+      "2020 Kgfg melancia",
+      "Ribeirão Preto, SP"
+    ],
+    "loopLog": [
+      {
+        "line": "R$10",
+        "cleanLine": "R$10",
+        "cleanPrice": 10,
+        "action": "FAILED_PRICE_BOUNDS"
+      },
+      {
+        "line": "R$10",
+        "cleanLine": "R$10",
+        "action": "SET_MODELO"
+      },
+      {
+        "line": "2020 Kgfg melancia",
+        "cleanLine": "2020KGFGMELANCIA",
+        "action": "SET_LOCAL"
+      },
+      {
+        "line": "Ribeirão Preto, SP",
+        "cleanLine": "RIBEIRÃOPRETO,SP",
+        "action": "NONE"
+      }
+    ],
+    "final": {
+      "preco": null,
+      "modelo": "R$10",
+      "local": "2020 Kgfg melancia",
+      "km": null
+    }
+  },
+  {
+    "lines": [
+      "R$100.000",
+      "2021 Volkswagen nivus",
+      "Jaboticabal, SP"
+    ],
+    "loopLog": [
+      {
+        "line": "R$100.000",
+        "cleanLine": "R$100.000",
+        "cleanPrice": 100000,
+        "action": "SET_PRICE"
+      },
+      {
+        "line": "2021 Volkswagen nivus",
+        "cleanLine": "2021VOLKSWAGENNIVUS",
+        "action": "SET_MODELO"
+      },
+      {
+        "line": "Jaboticabal, SP",
+        "cleanLine": "JABOTICABAL,SP",
+        "action": "SET_LOCAL"
+      }
+    ],
+    "final": {
+      "preco": 100000,
+      "modelo": "2021 Volkswagen nivus",
+      "local": "Jaboticabal, SP",
+      "km": null
+    }
+  }
+]
