@@ -85,16 +85,31 @@ module.exports = async function handler(req, res) {
         const maxAgeMs = 24 * 60 * 60 * 1000; // 24 horas
 
         if (ageMs < maxAgeMs) {
-          console.log(`[Cache HIT] Resultados retornados do banco para: "${normalizedQuery}"`);
-          return res.status(200).json({
-            query: term,
-            total: data.results.length,
-            cached: true,
-            updatedAt: data.updated_at,
-            results: data.results
-          });
+          const hasFipeData = data.results.some(car => car.fipe_price_str || car.is_own_stock);
+          if (data.results.length > 0 && !hasFipeData) {
+            console.log(`[Cache INVALIDADO] Cache antigo sem FIPE para: "${normalizedQuery}". Refazendo busca...`);
+          } else {
+            console.log(`[Cache HIT] Resultados retornados do banco para: "${normalizedQuery}"`);
+            
+            // Reagrupa por lojas (sites) para o formato da resposta
+            const sitesMap = {};
+            data.results.forEach(car => {
+              const src = car.dealer_name || "Desconhecido";
+              if (!sitesMap[src]) sitesMap[src] = 0;
+              sitesMap[src]++;
+            });
+            const sites = Object.entries(sitesMap).map(([name, count]) => ({ name, status: "success", count }));
+
+            return res.status(200).json({
+              status: "success",
+              count: data.results.length,
+              sites,
+              results: data.results
+            });
+          }
+        } else {
+          console.log(`[Cache STALE] Cache expirado para: "${normalizedQuery}". Atualizando via scrapers...`);
         }
-        console.log(`[Cache STALE] Cache expirado para: "${normalizedQuery}". Atualizando...`);
       }
     } catch (err) {
       console.warn("[Supabase Cache] Erro ao buscar cache:", err.message);

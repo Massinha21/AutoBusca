@@ -93,21 +93,29 @@ module.exports = async function handler(req, res) {
         const maxAgeMs = 24 * 60 * 60 * 1000; // 24 horas
 
         if (ageMs < maxAgeMs) {
-          console.log(`[Cache HIT - SSE] Resultados retornados do banco para: "${normalizedQuery}"`);
-          // Envia lista inicial com apenas o site de cache
-          sendSSE(res, "init", {
-            sites: [{ name: "Banco de Dados (Cache)" }]
-          });
-          // Envia os resultados do cache de uma vez só
-          sendSSE(res, "site-result", {
-            name: "Banco de Dados (Cache)",
-            status: "success",
-            count: data.results.length,
-            results: data.results
-          });
-          // Finaliza o stream
-          sendSSE(res, "done", { finished: true });
-          return res.end();
+          // Garante que o cache não seja usado se os carros não tiverem a tag fipe (cache antigo)
+          const hasFipeData = data.results.some(car => car.fipe_price_str || car.is_own_stock);
+          if (data.results.length > 0 && !hasFipeData) {
+            console.log(`[Cache INVALIDADO - SSE] Cache antigo sem FIPE para: "${normalizedQuery}". Refazendo busca...`);
+          } else {
+            console.log(`[Cache HIT - SSE] Resultados retornados do banco para: "${normalizedQuery}"`);
+            // Envia lista inicial com apenas o site de cache
+            sendSSE(res, "init", {
+              sites: [{ name: "Banco de Dados (Cache)" }]
+            });
+            // Envia os resultados do cache de uma vez só
+            sendSSE(res, "site-result", {
+              name: "Banco de Dados (Cache)",
+              status: "success",
+              count: data.results.length,
+              results: data.results
+            });
+            // Finaliza o stream
+            sendSSE(res, "done", { finished: true });
+            return res.end();
+          }
+        } else {
+          console.log(`[Cache STALE - SSE] Cache expirado para: "${normalizedQuery}". Atualizando via scrapers...`);
         }
         console.log(`[Cache STALE - SSE] Cache expirado para: "${normalizedQuery}". Atualizando via scrapers...`);
       }
