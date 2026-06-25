@@ -852,9 +852,10 @@ document.addEventListener("DOMContentLoaded", () => {
       if(UI && UI.renderCars) {
         UI.renderCars(sorted, activeCompareUrls);
         if (window.FipeClient) {
+          const allCards = Array.from(document.querySelectorAll('.car-card'));
           sorted.forEach(car => {
             if (!car.fipe_price_str) {
-              const cardElement = document.querySelector(`.car-card[data-url="${car.url}"]`);
+              const cardElement = allCards.find(el => el.getAttribute('data-url') === car.url);
               if (cardElement) window.FipeClient.enrichCarUI(car, cardElement);
             }
           });
