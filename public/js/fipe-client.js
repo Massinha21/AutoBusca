@@ -11,9 +11,9 @@ class FipeClient {
   }
 
   async fetchProxy(path) {
-    const url = `/api/fipe-proxy?path=${encodeURIComponent(path)}`;
+    const url = `https://parallelum.com.br/fipe/api/v1${path}`;
     const res = await fetch(url);
-    if (!res.ok) throw new Error(`Proxy error: ${res.status}`);
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
     return await res.json();
   }
 
