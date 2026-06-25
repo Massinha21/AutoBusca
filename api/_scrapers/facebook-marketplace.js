@@ -177,10 +177,28 @@ async function search(query) {
         quality_reason = "Anúncio completo (Preço, Ano e KM informados). Valores aparentam normalidade.";
       }
 
+      // Tenta extrair o KM da descrição caso o Facebook o tenha escondido do Card Principal
+      if (!item.km) {
+         const kmMatch = descLower.match(/(\d{1,3}(?:\.\d{3})*)\s*(?:km|quil[ôo]metros)/i);
+         if (kmMatch) {
+            item.km = parseInt(kmMatch[1].replace(/[^\d]/g, ''));
+         } else {
+            const milKmMatch = descLower.match(/(\d+)\s*mil\s*km/i);
+            if (milKmMatch) {
+               item.km = parseInt(milKmMatch[1]) * 1000;
+            }
+         }
+      }
+
+      let kmFormatted = "";
+      if (item.km && item.km > 0) {
+        kmFormatted = item.km.toLocaleString('pt-BR') + ' km';
+      }
+
       results.push({
         title: item.modelo,
         year: item.ano || 0,
-        km: item.km || 0,
+        km: kmFormatted,
         price_value: item.preco || 0,
         price: item.preco ? 'R$ ' + item.preco.toLocaleString('pt-BR') : 'Consulte',
         image_url: item.imagem,
