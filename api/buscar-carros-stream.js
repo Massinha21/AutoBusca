@@ -173,7 +173,7 @@ module.exports = async function handler(req, res) {
         parser.name
       );
 
-      const cars = (rawCars || []).map(car => {
+      let cars = (rawCars || []).map(car => {
         const { display, value } = normalizePrice(car.price);
         const meta = extractMetadataFromTitle(car.title);
         return {
@@ -185,6 +185,22 @@ module.exports = async function handler(req, res) {
           km: car.km || meta.km
         };
       });
+
+      // Busca FIPE para os carros das revendas
+      const { getFipePrice } = require('./_scrapers/fipe-matcher');
+      cars = await Promise.all(cars.map(async car => {
+        if (car.year && car.year > 1990) {
+          const brandName = term.split(' ')[0] || car.title.split(' ')[0];
+          const fipeData = await getFipePrice(brandName, car.title, car.version, car.year);
+          if (fipeData) {
+            car.fipe_price_str = fipeData.priceStr;
+            car.fipe_model_name = fipeData.fipeModel;
+            const numValue = parseFloat(fipeData.priceStr.replace(/[R$\s\.]/g, '').replace(',', '.'));
+            car.fipe_price_value = numValue;
+          }
+        }
+        return car;
+      }));
 
       // Acumula os carros encontrados com sucesso para salvar no cache
       if (cars.length > 0) {

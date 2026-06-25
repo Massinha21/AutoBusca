@@ -125,11 +125,14 @@ module.exports = async function handler(req, res) {
   const sites      = [];
   const webhookPromises = [];
 
-  settled.forEach((outcome, i) => {
+  const { getFipePrice } = require('./_scrapers/fipe-matcher');
+
+  for (let i = 0; i < settled.length; i++) {
+    const outcome = settled[i];
     const parser = PARSERS[i];
 
     if (outcome.status === "fulfilled") {
-      const cars = (outcome.value || []).map(car => {
+      let cars = (outcome.value || []).map(car => {
         const { display, value } = normalizePrice(car.price);
         const meta = extractMetadataFromTitle(car.title);
         return {
@@ -141,6 +144,21 @@ module.exports = async function handler(req, res) {
           km: car.km || meta.km
         };
       });
+
+      // Busca FIPE para os carros das revendas de forma assíncrona
+      cars = await Promise.all(cars.map(async car => {
+        if (car.year && car.year > 1990) {
+          const brandName = term.split(' ')[0] || car.title.split(' ')[0];
+          const fipeData = await getFipePrice(brandName, car.title, car.version, car.year);
+          if (fipeData) {
+            car.fipe_price_str = fipeData.priceStr;
+            car.fipe_model_name = fipeData.fipeModel;
+            const numValue = parseFloat(fipeData.priceStr.replace(/[R$\s\.]/g, '').replace(',', '.'));
+            car.fipe_price_value = numValue;
+          }
+        }
+        return car;
+      }));
 
       sites.push({ name: parser.name, status: "success", count: cars.length });
       allResults.push(...cars);
@@ -156,7 +174,7 @@ module.exports = async function handler(req, res) {
       // Agenda envio do webhook de alerta
       webhookPromises.push(sendWebhookAlert(parser.name, errMsg, `Busca (JSON) - Termo: "${term}"`));
     }
-  });
+  }
 
   // Aguarda todos os webhooks disparados concluírem antes de responder
   if (webhookPromises.length > 0) {
