@@ -93,9 +93,11 @@ module.exports = async function handler(req, res) {
         const maxAgeMs = 24 * 60 * 60 * 1000; // 24 horas
 
         if (ageMs < maxAgeMs) {
-          // Garante que o cache não seja usado se os carros não tiverem a tag fipe (cache antigo)
-          const hasFipeData = data.results.some(car => car.fipe_price_str || car.is_own_stock);
-          if (data.results.length > 0 && !hasFipeData) {
+          // Verifica se existem carros de revenda (não-estoque) e se ELES possuem fipe_price_str
+          const revendaCars = data.results.filter(car => !car.is_own_stock);
+          const hasFipeDataInRevendas = revendaCars.length === 0 || revendaCars.some(car => car.fipe_price_str);
+          
+          if (data.results.length > 0 && !hasFipeDataInRevendas) {
             console.log(`[Cache INVALIDADO - SSE] Cache antigo sem FIPE para: "${normalizedQuery}". Refazendo busca...`);
           } else {
             console.log(`[Cache HIT - SSE] Resultados retornados do banco para: "${normalizedQuery}"`);

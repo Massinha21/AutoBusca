@@ -85,8 +85,10 @@ module.exports = async function handler(req, res) {
         const maxAgeMs = 24 * 60 * 60 * 1000; // 24 horas
 
         if (ageMs < maxAgeMs) {
-          const hasFipeData = data.results.some(car => car.fipe_price_str || car.is_own_stock);
-          if (data.results.length > 0 && !hasFipeData) {
+          const revendaCars = data.results.filter(car => !car.is_own_stock);
+          const hasFipeDataInRevendas = revendaCars.length === 0 || revendaCars.some(car => car.fipe_price_str);
+          
+          if (data.results.length > 0 && !hasFipeDataInRevendas) {
             console.log(`[Cache INVALIDADO] Cache antigo sem FIPE para: "${normalizedQuery}". Refazendo busca...`);
           } else {
             console.log(`[Cache HIT] Resultados retornados do banco para: "${normalizedQuery}"`);
