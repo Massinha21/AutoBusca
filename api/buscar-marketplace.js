@@ -1,3 +1,5 @@
+const facebookMarketplaceScraper = require('./_scrapers/facebook-marketplace');
+
 module.exports = async (req, res) => {
   // CORS configuration
   res.setHeader('Access-Control-Allow-Credentials', true);
@@ -21,57 +23,68 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: 'Parâmetro query é obrigatório' });
     }
 
-    console.log(`[API] Retornando Mock Data do Facebook Marketplace para: "${query}"`);
+    console.log(`[API] Requisição recebida para Facebook Marketplace: "${query}"`);
+    const startTime = Date.now();
 
-    // Mock data direto para evitar limites de timeout e build da Vercel
-    const mockData = [
-      {
-        title: "Chevrolet Onix 1.0 LT (Simulação Vercel)",
-        year: 2019,
-        km: 45000,
-        price_value: 52000,
-        price: "R$ 52.000",
-        image_url: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80",
-        url: "https://www.facebook.com/marketplace",
-        dealer_name: "Facebook Marketplace",
-        quality_badge: "good",
-        quality_reason: "Anúncio completo (Preço, Ano e KM informados). Valores aparentam normalidade."
-      },
-      {
-        title: "Onix Joy 2018 Oportunidade",
-        year: 2018,
-        km: 0,
-        price_value: 12000,
-        price: "R$ 12.000",
-        image_url: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=800&q=80",
-        url: "https://www.facebook.com/marketplace",
-        dealer_name: "Facebook Marketplace",
-        quality_badge: "suspicious",
-        quality_reason: "Preço muito abaixo do mercado para o ano. Alto risco de fraude ou repasse."
-      },
-      {
-        title: "Onix Completo Único Dono",
-        year: 0,
-        km: 0,
-        price_value: 0,
-        price: "Consulte",
-        image_url: "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=800&q=80",
-        url: "https://www.facebook.com/marketplace",
-        dealer_name: "Facebook Marketplace",
-        quality_badge: "neutral",
-        quality_reason: "Preço ausente ou informações insuficientes para avaliação."
-      }
-    ];
+    let results = [];
 
-    // Simula um delay de busca de 2 segundos para dar tempo de ver os skeletons
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Se estiver rodando na Vercel, usa o Mock para evitar o erro 504 de Timeout
+    if (process.env.VERCEL) {
+      console.log("[API] Ambiente Vercel detectado. Retornando Mock Data.");
+      results = [
+        {
+          title: "Chevrolet Onix 1.0 LT (Simulação Vercel)",
+          year: 2019,
+          km: 45000,
+          price_value: 52000,
+          price: "R$ 52.000",
+          image_url: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=800&q=80",
+          url: "https://www.facebook.com/marketplace",
+          dealer_name: "Facebook Marketplace",
+          quality_badge: "good",
+          quality_reason: "Anúncio completo (Preço, Ano e KM informados). Valores aparentam normalidade."
+        },
+        {
+          title: "Onix Joy 2018 Oportunidade",
+          year: 2018,
+          km: 0,
+          price_value: 12000,
+          price: "R$ 12.000",
+          image_url: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=800&q=80",
+          url: "https://www.facebook.com/marketplace",
+          dealer_name: "Facebook Marketplace",
+          quality_badge: "suspicious",
+          quality_reason: "Preço muito abaixo do mercado para o ano. Alto risco de fraude ou repasse."
+        },
+        {
+          title: "Onix Completo Único Dono",
+          year: 0,
+          km: 0,
+          price_value: 0,
+          price: "Consulte",
+          image_url: "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=800&q=80",
+          url: "https://www.facebook.com/marketplace",
+          dealer_name: "Facebook Marketplace",
+          quality_badge: "neutral",
+          quality_reason: "Preço ausente ou informações insuficientes para avaliação."
+        }
+      ];
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    } else {
+      // Se estiver rodando localmente no PC, chama o scraper OFICIAL
+      console.log(`[API] Ambiente Local detectado. Executando Scraper Real.`);
+      results = await facebookMarketplaceScraper.search(query);
+    }
+
+    const elapsed = Date.now() - startTime;
+    console.log(`[API] Busca concluída em ${elapsed}ms. Itens encontrados: ${results.length}`);
 
     return res.status(200).json({
       success: true,
       query,
-      count: mockData.length,
-      results: mockData,
-      elapsed_ms: 2000
+      count: results.length,
+      results,
+      elapsed_ms: elapsed
     });
 
   } catch (err) {

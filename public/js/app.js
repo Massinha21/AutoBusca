@@ -524,9 +524,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       populateFiltersData(cars);
       resetFiltersUI();
-      const enriched = enrichCarsWithFipe(cars);
-      const sorted = sortCars(enriched, sortSelect.value);
-      UI.renderCars(sorted, activeCompareUrls);
+      applyFilters();
       UI.showResultsControls(cars.length);
     }
   }
@@ -756,6 +754,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const urls = Storage.parseUrlText(urlsText);
       runSearch(searchInput.value, urls);
     }
+  }
+
+  const qualitySelect = document.getElementById("quality-select");
+  if (qualitySelect) {
+    qualitySelect.addEventListener("change", applyFilters);
   }
 
   /**

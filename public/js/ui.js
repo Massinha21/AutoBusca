@@ -103,7 +103,43 @@ const UI = (() => {
     );
 
     let comparisonHtml = "";
-    if (car.comparison) {
+    if (car.fipe_price_str) {
+      // Lógica nova: cada carro tem sua própria FIPE
+      const fipeValor = car.fipe_price_value;
+      const fipeNome = car.fipe_model_name;
+      const fipePriceStr = car.fipe_price_str;
+
+      let badgeHtml = "";
+      if (car.price_value && fipeValor && car.price_value > 0) {
+        const diff = car.price_value - fipeValor;
+        const isBelow = diff < 0;
+        const absDiff = Math.abs(diff);
+        const percent = (absDiff / fipeValor) * 100;
+        
+        const formattedDiff = new Intl.NumberFormat("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+          maximumFractionDigits: 0
+        }).format(absDiff);
+        const percentStr = `${percent.toFixed(1)}%`;
+
+        badgeHtml = `
+          <div class="fipe-card-badge ${isBelow ? 'below' : 'above'}" title="Preço do anúncio vs FIPE: ${fipeNome}">
+            ${isBelow ? '▼' : '▲'} ${formattedDiff} (${percentStr}) ${isBelow ? 'abaixo' : 'acima'} da FIPE
+          </div>
+        `;
+      }
+
+      comparisonHtml = `
+        <div class="fipe-info-container" style="margin-top: 10px; background: rgba(255, 255, 255, 0.05); padding: 8px; border-radius: 6px; font-size: 0.8rem; border-left: 3px solid #3b82f6; display: flex; flex-direction: column; gap: 4px;">
+          <div style="color: #cbd5e1; display: flex; justify-content: space-between; align-items: center;">
+             <span>Tabela FIPE:</span> <strong>${fipePriceStr}</strong>
+          </div>
+          <div style="color: #94a3b8; font-size: 0.7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(fipeNome)}">${escapeHtml(fipeNome)}</div>
+          ${badgeHtml}
+        </div>
+      `;
+    } else if (car.comparison) {
       const isBelow = car.comparison.diff < 0;
       const absDiff = Math.abs(car.comparison.diff);
       const formattedDiff = new Intl.NumberFormat("pt-BR", {
@@ -121,11 +157,21 @@ const UI = (() => {
     }
 
     let metaHtml = "";
-    if (car.year || car.km) {
+    if (car.year || car.km || car.version) {
       metaHtml = `
         <div class="car-meta">
           ${car.year ? `<span class="meta-item" title="Ano do modelo"><span class="meta-icon">📅</span> ${escapeHtml(car.year)}</span>` : ""}
           ${car.km ? `<span class="meta-item" title="Quilometragem"><span class="meta-icon">🛣️</span> ${escapeHtml(car.km)}</span>` : ""}
+          ${car.version ? `<span class="meta-item" title="Versão"><span class="meta-icon">🏷️</span> ${escapeHtml(car.version)}</span>` : ""}
+        </div>
+      `;
+    }
+
+    let salvageBadgeHtml = "";
+    if (car.is_salvage) {
+      salvageBadgeHtml = `
+        <div class="salvage-badge" style="background-color: #ff3b3b; color: white; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; margin-top: 8px; display: inline-flex; align-items: center; gap: 4px;">
+          <span style="font-size: 14px;">🚨</span> Passagem por Leilão/Sinistro
         </div>
       `;
     }
@@ -197,7 +243,9 @@ const UI = (() => {
           </a>
         </h3>
         ${metaHtml}
+        ${salvageBadgeHtml}
         ${comparisonHtml}
+        ${qualityBadgeHtml}
         
         <div class="car-actions-row" style="display:flex; gap:6px; margin: 10px 0;">
           

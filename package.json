@@ -8,7 +8,9 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",
-    "cheerio": "^1.0.0"
+    "cheerio": "^1.0.0",
+    "express": "^5.2.1",
+    "puppeteer": "^25.2.0"
   },
   "scripts": {
     "dev-vercel": "vercel dev",

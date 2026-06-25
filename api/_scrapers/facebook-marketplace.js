@@ -1,106 +1,170 @@
-const puppeteer = require('puppeteer-core');
-const chromium = require('@sparticuz/chromium').default || require('@sparticuz/chromium');
+const puppeteer = require('puppeteer');
 
 /**
- * Realiza o scraping do Facebook Marketplace para um dado termo de busca.
- * @param {string} query - Termo de busca
- * @returns {Promise<Array>} Resultados encontrados
+ * Realiza o scraping do Facebook Marketplace localmente.
  */
 async function search(query) {
   let browser = null;
   const results = [];
 
   try {
-    // Determina se estamos na Vercel ou ambiente local
-    const isLocal = !process.env.VERCEL;
-    
-    // O pacote do Sparticuz Chromium precisa ser baixado dinamicamente na Vercel
-    // porque ele ultrapassa o limite de 50MB para funções Serverless.
-    const chromiumPack = isLocal
-      ? null
-      : "https://github.com/Sparticuz/chromium/releases/download/v121.0.0/chromium-v121.0.0-pack.tar";
-
-    const executablePath = await chromium.executablePath(chromiumPack);
-    console.log("[Marketplace] Executable path:", executablePath);
-
+    console.log("[Marketplace] Iniciando Puppeteer local...");
     browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: executablePath,
-      headless: chromium.headless,
-      ignoreHTTPSErrors: true,
+      headless: "new",
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
 
     const page = await browser.newPage();
     
-    // Configura headers reais para evitar bloqueio agressivo
+    // Headers reais
     await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
     await page.setExtraHTTPHeaders({
       'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
     });
 
     const encodedQuery = encodeURIComponent(query);
-    const searchUrl = `https://www.facebook.com/marketplace/108341642533031/search/?query=${encodedQuery}`;
+    // Usando a rota /search/ pois a rota /vehicles/ ignora a palavra-chave no Puppeteer
+    const searchUrl = `https://www.facebook.com/marketplace/ribeiraopreto/search/?query=${encodedQuery}&exact=false`;
     
     console.log(`[Marketplace] Acessando URL: ${searchUrl}`);
-    await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 15000 });
+    await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 30000 });
 
     // Aguarda carregar algum card de item (links do marketplace)
-    await page.waitForSelector('a[href*="/marketplace/item/"]', { timeout: 8000 }).catch(() => console.log("[Marketplace] Timeout aguardando seletor."));
+    await page.waitForSelector('a[href*="/marketplace/item/"]', { timeout: 15000 }).catch(() => console.log("[Marketplace] Timeout aguardando seletor."));
 
-    // Executa a extração no contexto da página
-    const items = await page.evaluate(() => {
+    // Rola um pouco a página para garantir que as imagens e os textos (innerText) sejam renderizados pelo React
+    await page.evaluate(async () => {
+      await new Promise((resolve) => {
+        let totalHeight = 0;
+        let distance = 300;
+        let timer = setInterval(() => {
+          let scrollHeight = document.body.scrollHeight;
+          window.scrollBy(0, distance);
+          totalHeight += distance;
+          if(totalHeight >= scrollHeight - window.innerHeight || totalHeight > 3000){
+            clearInterval(timer);
+            resolve();
+          }
+        }, 150);
+      });
+    });
+
+    // Executa a extração
+    const items = await page.evaluate(async () => {
       const links = Array.from(document.querySelectorAll('a[href*="/marketplace/item/"]'));
       const parsedItems = [];
       const seenLinks = new Set();
 
       links.forEach(a => {
         const link = a.href;
+        const spans = Array.from(a.querySelectorAll('span[dir="auto"]'));
+        const lines = spans.map(s => s.textContent.trim()).filter(l => l.length > 0);
+        
+        // Se não encontrou os spans, tenta o innerText separado por quebras
+        if (lines.length === 0) {
+          const textContent = (a.innerText || "").trim();
+          if (textContent) {
+            lines.push(...textContent.split(/[\\n\\r]+/).map(l => l.trim()).filter(l => l.length > 0));
+          }
+        }
+
+        // Se mesmo assim não houver linhas, ignora
+        if (lines.length < 2) return;
+        
         if (seenLinks.has(link)) return;
         seenLinks.add(link);
 
         const imgEl = a.querySelector('img');
         const imagem = imgEl ? imgEl.src : null;
-
-        const textContent = a.innerText || "";
-        const lines = textContent.split('\\n').map(l => l.trim()).filter(l => l.length > 0);
         
         let preco = null;
         let modelo = "Veículo do Marketplace";
         let local = "";
         let km = null;
 
-        lines.forEach(line => {
-          if (line.includes('R$') || /^\\d{1,3}(\\.\\d{3})*$/.test(line)) {
-            const cleanPrice = parseInt(line.replace(/[^\\d]/g, ''));
-            if (cleanPrice > 1000) preco = cleanPrice;
-          } else if (line.toLowerCase().includes('km') || line.includes('mil km')) {
-            const cleanKm = parseInt(line.replace(/[^\\d]/g, ''));
+        // O Facebook exibe as informações na ordem: Preço, Título, [KM opcional], Local.
+        let parsedCount = 0;
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          const cleanLine = line.replace(/\s+/g, '').toUpperCase();
+          const lowerLine = line.toLowerCase();
+
+          // Tenta achar o preço (primeira coisa que parece preço)
+          if (cleanLine === 'GRATUITO' || cleanLine === 'FREE') {
+            if (!preco) preco = 0;
+            continue;
+          }
+          if (cleanLine.includes('R$') || cleanLine.includes('US$') || cleanLine.includes('U$') || cleanLine.includes('$') || /^\d{1,3}([.,]\d{3})+$/.test(cleanLine)) {
+            // Remove centavos (ex: ,00) antes de limpar tudo para não multiplicar o valor por 100
+            const withoutCents = cleanLine.split(',')[0];
+            const cleanPrice = parseInt(withoutCents.replace(/[^\d]/g, ''));
+            if (cleanPrice > 1500 && cleanPrice < 2000000) {
+              if (!preco) preco = cleanPrice;
+              continue; // Ignora a linha (útil se o Facebook mandar um segundo preço de desconto)
+            }
+          }
+
+          // Tenta achar KM (se existir, geralmente vem depois do título)
+          if (!km && (lowerLine.includes('km') || lowerLine.includes('mil km'))) {
+            const cleanKm = parseInt(cleanLine.replace(/[^\d]/g, ''));
             if (cleanKm > 0) km = cleanKm;
-          } else if (line.length > 4 && !preco && !local) {
+            continue;
+          }
+
+          // Se não for Preço nem KM, preenche Título e depois Local
+          if (modelo === "Veículo do Marketplace") {
             modelo = line;
-          } else if (line.length > 3) {
+          } else if (local === "") {
             local = line;
           }
-        });
+        }
 
         let ano = null;
-        const yearMatch = modelo.match(/\\b(19\\d{2}|20\\d{2})\\b/);
+        const yearMatch = modelo.match(/\b(19\d{2}|20\d{2})\b/);
         if (yearMatch) {
           ano = parseInt(yearMatch[0]);
+          // Se o ano estiver no começo do título (ex: "2018 Hyundai HB20"), vamos removê-lo para limpar o visual
+          modelo = modelo.replace(new RegExp(`^${ano}\\s*-\\s*|^${ano}\\s+`), '').trim();
         }
 
         parsedItems.push({ modelo, ano, km, preco, imagem, link, local });
       });
 
+      // Baixa as descrições de cada anúncio de forma sequencial para não bloquear o IP
+      for (const item of parsedItems) {
+        if (!item.link) continue;
+        try {
+          const res = await fetch(item.link);
+          const html = await res.text();
+          const match = html.match(/<meta property="og:description" content="([^"]+)"/);
+          if (match) {
+            item.descricao = match[1];
+          } else {
+            item.descricao = "";
+          }
+        } catch (e) {
+          item.descricao = "";
+        }
+      }
+
       return parsedItems;
     });
 
-    console.log(`[Marketplace] Extraídos ${items.length} itens brutos.`);
+    console.log(`[Marketplace] Extraídos ${items.length} itens reais.`);
 
     items.forEach(item => {
       let quality_badge = "neutral";
       let quality_reason = "Anúncio dentro dos padrões normais.";
+
+      const descLower = (item.descricao || "").toLowerCase();
+      const is_salvage = /sinistro|leil[ãa]o|batida|recuperado|remarcado/i.test(descLower);
+      
+      // Tenta extrair a versão comum do título ou da descrição
+      const versionRegex = /\b(XEI|GLI|ALTIS|COMFORTLINE|HIGHLINE|TRENDLINE|TRACK|LT|LTZ|PREMIER|RS|SENSE|VISION|EVOLUTION|DIAMOND|PLATINUM|VOLCANO|FREEDOM|ENDURANCE|RANCH|ULTRA|ACTIVE|ALLURE|GRIFFE|LIKE|EX|EXL|TOURING|ELX|HLX|TREKKING|WAY|SPORTING|HGT|ADVANCE|PRECISION|DRIVE|LIMITED|LONGITUDE|SPORT|TRAILHAWK|SV|SL|UNIQUE|EXCLUSIVE|V-DRIVE)\b/i;
+      const fullTextToSearch = ((item.modelo || "") + " " + (item.descricao || "")).toUpperCase();
+      const versionMatch = fullTextToSearch.match(versionRegex);
+      const version = versionMatch ? versionMatch[1].toUpperCase() : "";
 
       if (!item.preco) {
         quality_badge = "suspicious";
@@ -123,62 +187,36 @@ async function search(query) {
         url: item.link,
         dealer_name: "Facebook Marketplace",
         quality_badge: quality_badge,
-        quality_reason: quality_reason
+        quality_reason: quality_reason,
+        is_salvage: is_salvage,
+        version: version,
+        description: item.descricao || ""
       });
-    });
+    }); // fim do forEach de items
+
+    // Busca o preço FIPE para cada item que tem versão e ano
+    const { getFipePrice } = require('./fipe-matcher');
+    for (const res of results) {
+      if (res.year && res.year > 1990) {
+        // Tenta descobrir a marca a partir do modelo pesquisado ou do título
+        const brandName = query.split(' ')[0] || res.title.split(' ')[0];
+        const fipeData = await getFipePrice(brandName, res.title, res.version, res.year);
+        if (fipeData) {
+          res.fipe_price_str = fipeData.priceStr;
+          res.fipe_model_name = fipeData.fipeModel;
+          // Converte "R$ 45.000,00" para 45000
+          const numValue = parseFloat(fipeData.priceStr.replace(/[R$\s\.]/g, '').replace(',', '.'));
+          res.fipe_price_value = numValue;
+        }
+      }
+    }
 
   } catch (error) {
-    console.error("[Marketplace] Erro no scraper:", error);
+    console.error("[Marketplace] Erro real no scraper local:", error);
   } finally {
     if (browser !== null) {
       await browser.close();
     }
-  }
-
-  // 🔴 FALLBACK PARA VERCEL HOBBY 🔴
-  // Como o plano gratuito da Vercel mata a função em 10 segundos, 
-  // o Puppeteer não tem tempo de baixar, abrir e carregar o Facebook.
-  // Para que o usuário possa ver a interface funcionando:
-  if (results.length === 0) {
-    console.log("[Marketplace] Retornando Mock Data devido a timeout/falha no Vercel Hobby.");
-    results.push(
-      {
-        title: "Chevrolet Onix 1.0 LT (Mock)",
-        year: 2019,
-        km: 45000,
-        price_value: 52000,
-        price: "R$ 52.000",
-        image_url: "https://http2.mlstatic.com/D_NQ_NP_900645-MLB76466964923_052024-O.webp",
-        url: "https://www.facebook.com/marketplace",
-        dealer_name: "Facebook Marketplace",
-        quality_badge: "good",
-        quality_reason: "Anúncio completo (Preço, Ano e KM informados). Valores aparentam normalidade."
-      },
-      {
-        title: "Onix Joy 2018 Oportunidade",
-        year: 2018,
-        km: 0,
-        price_value: 12000,
-        price: "R$ 12.000",
-        image_url: "https://http2.mlstatic.com/D_NQ_NP_727407-MLB76371427844_052024-O.webp",
-        url: "https://www.facebook.com/marketplace",
-        dealer_name: "Facebook Marketplace",
-        quality_badge: "suspicious",
-        quality_reason: "Preço muito abaixo do mercado para o ano. Alto risco de fraude ou repasse."
-      },
-      {
-        title: "Onix Completo Único Dono",
-        year: 0,
-        km: 0,
-        price_value: 0,
-        price: "Consulte",
-        image_url: "https://http2.mlstatic.com/D_NQ_NP_600862-MLB76088362678_052024-O.webp",
-        url: "https://www.facebook.com/marketplace",
-        dealer_name: "Facebook Marketplace",
-        quality_badge: "neutral",
-        quality_reason: "Preço ausente ou informações insuficientes para avaliação."
-      }
-    );
   }
 
   return results;
