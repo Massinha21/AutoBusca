@@ -13,29 +13,16 @@
 
 document.addEventListener("DOMContentLoaded", () => {
 
+  // ── Configuração da API ───────────────────────────────────────────────
+  // Usa o nosso proxy na Vercel (com cache de borda de 24h) para não tomar rate limit (429) do Parallelum
+  const FIPE_BASE = "/api/fipe-proxy?path=";
+
   // Ícone de cada tipo de veículo (para exibir no resultado)
   const TIPO_ICONS = {
     carros:    "🚗",
     motos:     "🏍️",
     caminhoes: "🚛",
   };
-
-  const TIPO_CODES = {
-    carros: 1,
-    motos: 2,
-    caminhoes: 3
-  };
-
-  let tabelaRefCache = null;
-
-  async function getTabelaRef() {
-    if (!tabelaRefCache) {
-      const res = await fetch("/api/fipe-proxy?action=tabelas");
-      const data = await res.json();
-      tabelaRefCache = data[0].Codigo;
-    }
-    return tabelaRefCache;
-  }
 
   // ── Estado da aplicação ───────────────────────────────────────────────
   let tipoAtual    = "carros";  // tipo selecionado no momento
@@ -176,17 +163,13 @@ document.addEventListener("DOMContentLoaded", () => {
     selectMarca.disabled = true;
 
     try {
-      const t = await getTabelaRef();
-      const codigoTipo = TIPO_CODES[tipo];
-      const res = await fetch(`/api/fipe-proxy?action=marcas&tipo=${codigoTipo}&tabela=${t}`);
-      if (!res.ok) throw new Error("Falha ao consultar a API proxy.");
-      const dados = await res.json();
+      const dados = await fetchFipe(`/${tipo}/marcas`);
 
       selectMarca.innerHTML = `<option value="">Selecione a marca</option>`;
       dados.forEach((marca) => {
         const opt = document.createElement("option");
-        opt.value = marca.Value;
-        opt.textContent = marca.Label;
+        opt.value = marca.codigo;
+        opt.textContent = marca.nome;
         selectMarca.appendChild(opt);
       });
 
@@ -208,18 +191,15 @@ document.addEventListener("DOMContentLoaded", () => {
     setLoader(loaderModelo, true);
 
     try {
-      const t = await getTabelaRef();
-      const codigoTipo = TIPO_CODES[tipo];
-      const res = await fetch(`/api/fipe-proxy?action=modelos&tipo=${codigoTipo}&tabela=${t}&marca=${codigoMarca}`);
-      if (!res.ok) throw new Error("Falha ao consultar a API proxy.");
-      const dados = await res.json();
-      const modelos = dados.Modelos || dados;
+      // A API retorna { modelos: [...], anos: [...] }
+      const dados = await fetchFipe(`/${tipo}/marcas/${codigoMarca}/modelos`);
+      const modelos = dados.modelos || dados;
 
       selectModelo.innerHTML = `<option value="">Selecione o modelo</option>`;
       modelos.forEach((modelo) => {
         const opt = document.createElement("option");
-        opt.value = modelo.Value;
-        opt.textContent = modelo.Label;
+        opt.value = modelo.codigo;
+        opt.textContent = modelo.nome;
         selectModelo.appendChild(opt);
       });
 
@@ -242,17 +222,13 @@ document.addEventListener("DOMContentLoaded", () => {
     setLoader(loaderAno, true);
 
     try {
-      const t = await getTabelaRef();
-      const codigoTipo = TIPO_CODES[tipo];
-      const res = await fetch(`/api/fipe-proxy?action=anos&tipo=${codigoTipo}&tabela=${t}&marca=${codigoMarca}&modelo=${codigoModelo}`);
-      if (!res.ok) throw new Error("Falha ao consultar a API proxy.");
-      const dados = await res.json();
+      const dados = await fetchFipe(`/${tipo}/marcas/${codigoMarca}/modelos/${codigoModelo}/anos`);
 
       selectAno.innerHTML = `<option value="">Selecione o ano</option>`;
       dados.forEach((ano) => {
         const opt = document.createElement("option");
-        opt.value = ano.Value;
-        opt.textContent = ano.Label;
+        opt.value = ano.codigo;
+        opt.textContent = ano.nome;
         selectAno.appendChild(opt);
       });
 
@@ -277,11 +253,9 @@ document.addEventListener("DOMContentLoaded", () => {
     esconderResultado();
 
     try {
-      const t = await getTabelaRef();
-      const codigoTipo = TIPO_CODES[tipoAtual];
-      const res = await fetch(`/api/fipe-proxy?action=valor&tipo=${codigoTipo}&tabela=${t}&marca=${marcaAtual.codigo}&modelo=${modeloAtual.codigo}&anoCombustivel=${anoAtual.codigo}`);
-      if (!res.ok) throw new Error("Falha ao consultar a API proxy.");
-      const dados = await res.json();
+      const dados = await fetchFipe(
+        `/${tipoAtual}/marcas/${marcaAtual.codigo}/modelos/${modeloAtual.codigo}/anos/${anoAtual.codigo}`
+      );
 
       exibirResultado(dados);
     } catch (err) {
@@ -349,7 +323,23 @@ document.addEventListener("DOMContentLoaded", () => {
   // UTILITÁRIOS
   // ══════════════════════════════════════════════════════════════════════
 
+  /**
+   * Faz um GET para a API FIPE e retorna o JSON.
+   * Lança erro se o status não for 200.
+   *
+   * @param {string} path - Caminho relativo (ex: "/carros/marcas")
+   * @returns {Promise<any>}
+   */
+  async function fetchFipe(path) {
+    const url = `${FIPE_BASE}${path}`;
+    const res = await fetch(url);
 
+    if (!res.ok) {
+      throw new Error(`API retornou ${res.status} para ${path}`);
+    }
+
+    return res.json();
+  }
 
   /**
    * Reseta todos os selects para o estado inicial.
