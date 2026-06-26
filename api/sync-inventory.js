@@ -10,6 +10,7 @@ const { supabase } = require("./_lib/supabase");
 // ── Lista de Scrapers ──────────────────────────────────────────────────────
 const PARSERS = [
   require("./_scrapers/zmveiculos"),
+  require("./_scrapers/smartcarros"),
   require("./_scrapers/amfveiculos"),
   require("./_scrapers/savinhomotors"),
   require("./_scrapers/ramiroveiculos"),
