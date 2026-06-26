@@ -18,7 +18,7 @@ async function search(query, fetchHtml) {
   let hasNext = true;
 
   while (page <= MAX_PAGES && hasNext) {
-    let itemsFoundOnPage = 0;
+    let initialLength = results.length;
     
   const url = `${BASE_URL}/estoque?veiculo=${encodeURIComponent(query)}&page=${page}`;
   const html = await fetchHtml(url);
@@ -95,14 +95,19 @@ async function search(query, fetchHtml) {
         }
       } catch (e) {}
 
-      itemsFoundOnPage++;
       results.push({ title, price, image_url, url: link, dealer_name: NAME, year: extYear, km: extKm });
     } catch (_) {}
   });
 
   
     
-    if (itemsFoundOnPage === 0) {
+    
+    // Deduplicate results inside the loop to see if we actually added NEW cars
+    const uniqueResults = [...new Map(results.map(v => [v.url, v])).values()];
+    results.length = 0;
+    results.push(...uniqueResults);
+
+    if (results.length === initialLength) {
       hasNext = false;
     } else {
       page++;

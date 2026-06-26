@@ -18,7 +18,7 @@ async function search(query, fetchHtml) {
       const url = `${BASE_URL}/estoque?page=${page}`;
       const html = await fetchHtml(url);
       const $ = cheerio.load(html);
-      let itemsFoundOnPage = 0;
+      let initialLength = results.length;
 
       $('td').each((i, el) => {
         const htmlText = $(el).html() || "";
@@ -88,7 +88,13 @@ async function search(query, fetchHtml) {
         }
       });
 
-      if (itemsFoundOnPage === 0) {
+      
+    // Deduplicate results inside the loop to see if we actually added NEW cars
+    const uniqueResults = [...new Map(results.map(v => [v.url, v])).values()];
+    results.length = 0;
+    results.push(...uniqueResults);
+
+    if (results.length === initialLength) {
         hasNext = false;
       } else {
         page++;

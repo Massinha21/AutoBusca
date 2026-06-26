@@ -28,6 +28,7 @@ async function search(query, fetchHtml) {
       const cards = $(".cerca");
       if (!cards.length) break;
 
+      const currentLength = results.length;
       cards.each((_, card) => {
         try {
           const el = $(card);
@@ -71,7 +72,11 @@ async function search(query, fetchHtml) {
         } catch (_) {}
       });
 
-      if (cards.length < 24) break;
+      const uniqueResults = [...new Map(results.map(v => [v.url, v])).values()];
+      results.length = 0;
+      results.push(...uniqueResults);
+
+      if (results.length === currentLength) break;
     } catch (_) { break; }
   }
   return results;
