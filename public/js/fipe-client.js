@@ -11,6 +11,7 @@ class FipeClient {
   }
 
   async fetchProxy(path) {
+    await new Promise(r => setTimeout(r, 250)); // Throttling: máximo 4 requests por segundo
     const url = `https://parallelum.com.br/fipe/api/v1${path}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -27,8 +28,10 @@ class FipeClient {
     if (parsedYear < 1990) return null;
 
     try {
-      if (!this.brandsCache) {
-        this.brandsCache = await this.fetchProxy('/carros/marcas');
+      if (!this.brandsCache || !Array.isArray(this.brandsCache)) {
+        const brandsRes = await this.fetchProxy('/carros/marcas');
+        if (!Array.isArray(brandsRes)) return null; // API retornou erro (rate limit)
+        this.brandsCache = brandsRes;
       }
 
       let targetBrand = brandName.toLowerCase();
@@ -49,15 +52,21 @@ class FipeClient {
       if (modelToBrand[targetBrand]) targetBrand = modelToBrand[targetBrand];
       if (modelToBrand[baseModel]) targetBrand = modelToBrand[baseModel];
 
-      const brandMatch = this.brandsCache.find(b => b.nome.toLowerCase().includes(targetBrand) || (targetBrand === 'chevrolet' && b.nome.toLowerCase() === 'gm - chevrolet'));
+      const brandMatch = this.brandsCache.find(b => 
+        b.nome.toLowerCase().includes(targetBrand) || 
+        (targetBrand === 'chevrolet' && b.nome.toLowerCase() === 'gm - chevrolet')
+      );
+      
       if (!brandMatch) return null;
       const brandId = brandMatch.codigo;
 
       if (!this.modelsCache[brandId]) {
         const data = await this.fetchProxy(`/carros/marcas/${brandId}/modelos`);
-        this.modelsCache[brandId] = data.modelos || [];
+        if (!data || !Array.isArray(data.modelos)) return null;
+        this.modelsCache[brandId] = data.modelos;
       }
       const modelos = this.modelsCache[brandId];
+      if (!Array.isArray(modelos)) return null;
 
       const searchTerms = [baseModel];
       if (version) {
@@ -65,10 +74,29 @@ class FipeClient {
         searchTerms.push(...versionWords);
       }
 
-      const possibleModels = modelos.filter(m => {
+      const scoredModels = modelos.map(m => {
         const mNameLower = m.nome.toLowerCase();
-        return searchTerms.every(term => mNameLower.includes(term));
+        let score = 0;
+        
+        // Peso enorme para o nome base do carro
+        if (mNameLower.includes(baseModel)) {
+          score += 10;
+        }
+        
+        searchTerms.forEach(term => {
+          if (mNameLower.includes(term) && term !== baseModel) score += 2;
+          // Partial match pra ajudar com MT, LT, etc
+          else if (term.length > 2 && mNameLower.includes(term.substring(0, 3))) score += 1;
+        });
+        
+        return { model: m, score };
       });
+
+      const possibleModels = scoredModels
+        .filter(sm => sm.score >= 10) // Exige que no mínimo o nome base (ex: Onix) bata
+        .sort((a, b) => b.score - a.score)
+        .map(sm => sm.model)
+        .slice(0, 10); // Pega os 10 mais prováveis
 
       if (possibleModels.length === 0) return null;
 
@@ -78,17 +106,23 @@ class FipeClient {
         }
         const anosList = this.anosCache[model.codigo];
         
-        const yearMatchItem = anosList.find(a => a.codigo.startsWith(parsedYear.toString()));
-        if (yearMatchItem) {
-          const cacheKey = `${model.codigo}-${yearMatchItem.codigo}`;
-          if (!this.priceCache[cacheKey]) {
-            const data = await this.fetchProxy(`/carros/marcas/${brandId}/modelos/${model.codigo}/anos/${yearMatchItem.codigo}`);
-            this.priceCache[cacheKey] = {
-              priceStr: data.Valor,
-              fipeModel: data.Modelo
-            };
+        if (Array.isArray(anosList)) {
+          const yearMatchItem = anosList.find(a => String(a.codigo).startsWith(parsedYear.toString()));
+          if (yearMatchItem) {
+            const cacheKey = `${model.codigo}-${yearMatchItem.codigo}`;
+            if (!this.priceCache[cacheKey]) {
+              const data = await this.fetchProxy(`/carros/marcas/${brandId}/modelos/${model.codigo}/anos/${yearMatchItem.codigo}`);
+              if (data && data.Valor) {
+                this.priceCache[cacheKey] = {
+                  priceStr: data.Valor,
+                  fipeModel: data.Modelo
+                };
+              } else {
+                continue; // Erro na API ou modelo não encontrado
+              }
+            }
+            return this.priceCache[cacheKey];
           }
-          return this.priceCache[cacheKey];
         }
       }
       return null;
