@@ -70,8 +70,13 @@ class FipeClient {
 
       const searchTerms = [baseModel];
       if (version) {
-        const versionWords = version.toLowerCase().split(' ').filter(v => v.length > 0 && v !== 'hatch' && v !== 'sedan');
+        const versionWords = version.toLowerCase().replace(/[^a-z0-9\s\.]/g, ' ').split(/\s+/).filter(w => w.length > 0 && w !== baseModel && w !== targetBrand);
         searchTerms.push(...versionWords);
+      }
+
+      // Se não achou NENHUMA palavra indicando versão, motor, etc, consideramos Inconclusivo
+      if (searchTerms.length === 1) {
+        return { inconclusive: true };
       }
 
       const scoredModels = modelos.map(m => {
@@ -145,7 +150,12 @@ class FipeClient {
     try {
       const brandName = car.title.split(' ')[0];
       const fipeData = await this.getPrice(brandName, car.title, car.version, car.year);
-      if (fipeData && fipeData.priceStr) {
+      
+      if (fipeData && fipeData.inconclusive) {
+        car.fipe_inconclusive = true;
+        if (cardElement) this.updateCardUI(car, cardElement);
+      }
+      else if (fipeData && fipeData.priceStr) {
         car.fipe_price_str = fipeData.priceStr;
         car.fipe_model_name = fipeData.fipeModel;
         const numValue = parseFloat(fipeData.priceStr.replace(/[R$\s\.]/g, '').replace(',', '.'));
@@ -171,6 +181,30 @@ class FipeClient {
     const existingBadge = body.querySelector('.fipe-badge, .fipe-card-badge, .fipe-placeholder');
     if (existingBadge) {
        existingBadge.remove();
+    }
+
+    if (car.fipe_inconclusive) {
+      const qualitySelect = document.getElementById("quality-select");
+      if (qualitySelect && qualitySelect.value === "safe_conclusive") {
+        cardElement.style.display = 'none';
+        return; // Nem renderiza, apenas esconde
+      }
+
+      const fipeHtml = `
+        <div class="fipe-info-container fipe-async-badge" style="margin-top: 10px; background: rgba(255, 255, 255, 0.05); padding: 8px; border-radius: 6px; font-size: 0.8rem; border-left: 3px solid #64748b; display: flex; flex-direction: column; gap: 4px;">
+          <div style="color: #94a3b8; font-weight: bold; margin-bottom: 2px;">⚠️ FIPE Inconclusiva</div>
+          <div style="color: #94a3b8; font-size: 0.75rem; line-height: 1.3;">
+            A versão exata não foi informada no anúncio. Impossível calcular a FIPE com precisão.
+          </div>
+        </div>
+      `;
+      const actionsRow = body.querySelector('.car-actions-row');
+      if (actionsRow) {
+        actionsRow.insertAdjacentHTML('beforebegin', fipeHtml);
+      } else {
+        body.insertAdjacentHTML('beforeend', fipeHtml);
+      }
+      return;
     }
 
     const fipeNome = car.fipe_model_name || '';

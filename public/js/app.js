@@ -843,6 +843,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const qualitySelect = document.getElementById("quality-select");
     if (qualitySelect && qualitySelect.value === "safe") {
       filtered = filtered.filter(car => car.quality_badge !== "suspicious" && !car.is_salvage);
+    } else if (qualitySelect && qualitySelect.value === "safe_conclusive") {
+      filtered = filtered.filter(car => car.quality_badge !== "suspicious" && !car.is_salvage && car.fipe_inconclusive !== true);
     }
     
     const sorted = sortCars(filtered, sortSelect ? sortSelect.value : 'default');
