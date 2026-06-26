@@ -7,10 +7,20 @@ const NAME     = "Auto Prime RP";
 const BASE_URL = "https://autoprimerp.com.br";
 
 async function search(query, fetchHtml) {
-  const html = await fetchHtml(`${BASE_URL}/estoque`);
-  const $ = cheerio.load(html);
   const queryWords = query.toLowerCase().split(/\s+/);
-  const results = [];
+const results = [];
+
+  const MAX_PAGES = 5;
+  let page = 1;
+  let hasNext = true;
+
+  while (page <= MAX_PAGES && hasNext) {
+    let itemsFoundOnPage = 0;
+    
+  const html = await fetchHtml(`${BASE_URL}/estoque?page=${page}`);
+  const $ = cheerio.load(html);
+  
+  
 
   $("ul").each((_, ul) => {
     try {
@@ -59,9 +69,18 @@ async function search(query, fetchHtml) {
         }
       } catch (e) {}
 
+      itemsFoundOnPage++;
       results.push({ title, price, image_url, url: link, dealer_name: NAME, year: extYear, km: extKm });
     } catch (_) {}
   });
-  return results;
+  
+    
+    if (itemsFoundOnPage === 0) {
+      hasNext = false;
+    } else {
+      page++;
+    }
+  }
+return results;
 }
 module.exports = { search, name: NAME };

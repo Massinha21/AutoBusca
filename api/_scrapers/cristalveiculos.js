@@ -7,10 +7,20 @@ const NAME     = "Cristal Veículos";
 const BASE_URL = "http://www.cristalveiculosrp.com.br";
 
 async function search(query, fetchHtml) {
-  const html = await fetchHtml(`${BASE_URL}/veiculos.php`);
-  const $    = cheerio.load(html);
   const queryWords = query.toLowerCase().split(/\s+/);
-  const results = [];
+const results = [];
+
+  const MAX_PAGES = 5;
+  let page = 1;
+  let hasNext = true;
+
+  while (page <= MAX_PAGES && hasNext) {
+    let itemsFoundOnPage = 0;
+    
+  const html = await fetchHtml(`${BASE_URL}/veiculos.php?page=${page}`);
+  const $    = cheerio.load(html);
+  
+  
 
   // Cada card de veículo está em um link de detalhe detalhe.php?id=...
   $("a[href^='detalhe.php?id=']").each((_, aEl) => {
@@ -82,11 +92,20 @@ async function search(query, fetchHtml) {
         }
       } catch (e) {}
 
+      itemsFoundOnPage++;
       results.push({ title, price, image_url, url: link, dealer_name: NAME, year: extYear, km: extKm });
     } catch (_) {}
   });
 
-  return results;
+  
+    
+    if (itemsFoundOnPage === 0) {
+      hasNext = false;
+    } else {
+      page++;
+    }
+  }
+return results;
 }
 
 module.exports = { search, name: NAME };

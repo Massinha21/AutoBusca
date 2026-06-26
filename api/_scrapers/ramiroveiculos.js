@@ -11,10 +11,19 @@ const NAME     = "Ramiro Veículos";
 const BASE_URL = "https://www.ramiroveiculos.com";
 
 async function search(query, fetchHtml) {
-  const url = `${BASE_URL}/estoque?veiculo=${encodeURIComponent(query)}`;
+  const results = [];
+
+  const MAX_PAGES = 5;
+  let page = 1;
+  let hasNext = true;
+
+  while (page <= MAX_PAGES && hasNext) {
+    let itemsFoundOnPage = 0;
+    
+  const url = `${BASE_URL}/estoque?veiculo=${encodeURIComponent(query)}&page=${page}`;
   const html = await fetchHtml(url);
   const $    = cheerio.load(html);
-  const results = [];
+  
 
   const cards = $(".card-destaque").length ? $(".card-destaque") : $(".destaque");
 
@@ -86,11 +95,20 @@ async function search(query, fetchHtml) {
         }
       } catch (e) {}
 
+      itemsFoundOnPage++;
       results.push({ title, price, image_url, url: link, dealer_name: NAME, year: extYear, km: extKm });
     } catch (_) {}
   });
 
-  return results;
+  
+    
+    if (itemsFoundOnPage === 0) {
+      hasNext = false;
+    } else {
+      page++;
+    }
+  }
+return results;
 }
 
 module.exports = { search, name: NAME };

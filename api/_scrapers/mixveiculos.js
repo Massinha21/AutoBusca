@@ -7,10 +7,19 @@ const NAME     = "Mix Veículos";
 const BASE_URL = "https://mixveiculosribeirao.com.br";
 
 async function search(query, fetchHtml) {
-  const url = `${BASE_URL}/index.php?route=product/search&search=${encodeURIComponent(query)}`;
+  const results = [];
+
+  const MAX_PAGES = 5;
+  let page = 1;
+  let hasNext = true;
+
+  while (page <= MAX_PAGES && hasNext) {
+    let itemsFoundOnPage = 0;
+    
+  const url = `${BASE_URL}/index.php?route=product/search&search=${encodeURIComponent(query)}&page=${page}`;
   const html = await fetchHtml(url);
   const $    = cheerio.load(html);
-  const results = [];
+  
 
   $(".product-grid-item, .product-list-item").each((_, item) => {
     try {
@@ -70,11 +79,20 @@ async function search(query, fetchHtml) {
         }
       } catch (e) {}
 
+      itemsFoundOnPage++;
       results.push({ title, price, image_url, url: link, dealer_name: NAME, year: extYear, km: extKm });
     } catch (_) {}
   });
 
-  return results;
+  
+    
+    if (itemsFoundOnPage === 0) {
+      hasNext = false;
+    } else {
+      page++;
+    }
+  }
+return results;
 }
 
 module.exports = { search, name: NAME };

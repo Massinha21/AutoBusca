@@ -11,8 +11,17 @@ const NAME     = "Savinho Motors";
 const BASE_URL = "https://savinhomotors.com.br";
 
 async function search(query, fetchHtml) {
+  const results = [];
+
+  const MAX_PAGES = 5;
+  let page = 1;
+  let hasNext = true;
+
+  while (page <= MAX_PAGES && hasNext) {
+    let itemsFoundOnPage = 0;
+    
   // Este site tem API própria que retorna JSON com HTML embutido
-  const url = `${BASE_URL}/api/vehicles?search=${encodeURIComponent(query)}`;
+  const url = `${BASE_URL}/api/vehicles?search=${encodeURIComponent(query)}&page=${page}&page=${page}`;
   const raw  = await fetchHtml(url);
 
   let html;
@@ -27,7 +36,7 @@ async function search(query, fetchHtml) {
   if (!html) return [];
 
   const $       = cheerio.load(html);
-  const results = [];
+  
 
   $("article.vehicle-card").each((_, card) => {
     try {
@@ -71,11 +80,20 @@ async function search(query, fetchHtml) {
         }
       } catch (e) {}
 
+      itemsFoundOnPage++;
       results.push({ title, price, image_url, url: link, dealer_name: NAME, year: extYear, km: extKm });
     } catch (_) {}
   });
 
-  return results;
+  
+    
+    if (itemsFoundOnPage === 0) {
+      hasNext = false;
+    } else {
+      page++;
+    }
+  }
+return results;
 }
 
 module.exports = { search, name: NAME };

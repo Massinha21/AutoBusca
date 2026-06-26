@@ -7,15 +7,25 @@ const NAME     = "Lexcar Multimarcas";
 const BASE_URL = "https://lexcarmultimarcas.com.br";
 
 async function search(query, fetchHtml) {
+  const queryWords = query.toLowerCase().split(/\s+/);
+const results = [];
+
+  const MAX_PAGES = 5;
+  let page = 1;
+  let hasNext = true;
+
+  while (page <= MAX_PAGES && hasNext) {
+    let itemsFoundOnPage = 0;
+    
   // Passamos o cookie no fetchHtml injetado. Como o fetchHtml padrão não recebe cookies adicionais por parâmetro,
   // nós implementamos nossa própria chamada HTTP ou decoramos a requisição se necessário.
   // IMPORTANTE: Para o scraper rodar no Vercel de forma limpa, podemos fazer um request fetch customizado com Cookie!
-  const queryWords = query.toLowerCase().split(/\s+/);
-  const results = [];
+  
+  
 
   try {
     // Busca customizada com headers e cookies
-    const response = await fetch(`${BASE_URL}/estoque`, {
+    const response = await fetch(`${BASE_URL}/estoque?page=${page}`, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -78,6 +88,7 @@ async function search(query, fetchHtml) {
         }
       } catch (e) {}
 
+      itemsFoundOnPage++;
       results.push({ title, price, image_url, url: link, dealer_name: NAME, year: extYear, km: extKm });
       } catch (_) {}
     });
@@ -86,7 +97,15 @@ async function search(query, fetchHtml) {
     console.error(`[${NAME}] Erro no fetch customizado:`, err.message);
   }
 
-  return results;
+  
+    
+    if (itemsFoundOnPage === 0) {
+      hasNext = false;
+    } else {
+      page++;
+    }
+  }
+return results;
 }
 
 module.exports = { search, name: NAME };
