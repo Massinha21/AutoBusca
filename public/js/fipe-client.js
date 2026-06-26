@@ -173,13 +173,16 @@ class FipeClient {
        existingBadge.remove();
     }
 
-    let fipeHtml = `
-      <div class="fipe-badge" style="margin-top: 10px; font-weight: bold; color: #ffeb3b;">
-        FIPE: ${car.fipe_price_str}
-      </div>
-    `;
+    const fipeNome = car.fipe_model_name || '';
+    const fipePriceStr = car.fipe_price_str || '';
+    
+    // Função helper simplificada escapeHtml
+    const escapeHtml = (unsafe) => {
+      if (!unsafe) return "";
+      return unsafe.toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    };
 
-    // Calcula se está abaixo da FIPE
+    let badgeHtml = "";
     if (car.fipe_price_value && car.price_value) {
       const diff = car.price_value - car.fipe_price_value;
       const isBelow = diff < 0;
@@ -187,12 +190,22 @@ class FipeClient {
       const formattedDiff = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(absDiff);
       const percentStr = `${Math.abs((diff / car.fipe_price_value) * 100).toFixed(1)}%`;
       
-      fipeHtml = `
-        <div class="fipe-card-badge ${isBelow ? 'below' : 'above'}" title="Preço em relação à tabela FIPE">
+      badgeHtml = `
+        <div class="fipe-card-badge ${isBelow ? 'below' : 'above'}" title="Preço do anúncio vs FIPE: ${fipeNome}">
           ${isBelow ? '▼' : '▲'} ${formattedDiff} (${percentStr}) ${isBelow ? 'abaixo' : 'acima'} da FIPE
         </div>
       `;
     }
+
+    const fipeHtml = `
+      <div class="fipe-info-container fipe-async-badge" style="margin-top: 10px; background: rgba(255, 255, 255, 0.05); padding: 8px; border-radius: 6px; font-size: 0.8rem; border-left: 3px solid #3b82f6; display: flex; flex-direction: column; gap: 4px;">
+        <div style="color: #cbd5e1; display: flex; justify-content: space-between; align-items: center;">
+           <span>Tabela FIPE:</span> <strong>${fipePriceStr}</strong>
+        </div>
+        <div style="color: #94a3b8; font-size: 0.7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(fipeNome)}">${escapeHtml(fipeNome)}</div>
+        ${badgeHtml}
+      </div>
+    `;
 
     // Injeta antes de car-actions-row
     const actionsRow = body.querySelector('.car-actions-row');
