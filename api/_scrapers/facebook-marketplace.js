@@ -268,7 +268,9 @@ async function search(query) {
         // Tenta descobrir a marca a partir do modelo pesquisado ou do título
         const brandName = query.split(' ')[0] || res.title.split(' ')[0];
         const fipeData = await getFipePrice(brandName, res.title, res.version, res.year);
-        if (fipeData) {
+        if (fipeData && fipeData.inconclusive) {
+          res.fipe_inconclusive = true;
+        } else if (fipeData && fipeData.priceStr) {
           res.fipe_price_str = fipeData.priceStr;
           res.fipe_model_name = fipeData.fipeModel;
           // Converte "R$ 45.000,00" para 45000

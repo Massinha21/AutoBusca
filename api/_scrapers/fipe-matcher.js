@@ -128,18 +128,37 @@ async function _getFipePrice(brandName, modelName, version, year) {
     // Procura o modelo que mais combina com o nome e versão
     const searchTerms = [baseModel];
     if (version) {
-      const versionWords = version.toLowerCase().split(' ').filter(v => v.length > 0 && v !== 'hatch' && v !== 'sedan');
+      const versionWords = version.toLowerCase().replace(/[^a-z0-9\s\.]/g, ' ').split(/\s+/).filter(w => w.length > 0 && w !== baseModel && w !== targetBrand);
       searchTerms.push(...versionWords);
     }
     
-    let possibleModels = [];
-    for (const m of modelos) {
-      const mNameLower = m.Label.toLowerCase();
-      // Checa se o nome FIPE contém TODOS os termos buscados
-      if (searchTerms.every(term => mNameLower.includes(term))) {
-        possibleModels.push(m);
-      }
+    // Se não achou NENHUMA palavra indicando versão, motor, etc, consideramos Inconclusivo
+    if (searchTerms.length === 1) {
+      return { inconclusive: true };
     }
+
+    const scoredModels = modelos.map(m => {
+      const mNameLower = m.Label.toLowerCase();
+      let score = 0;
+      
+      // Peso enorme para o nome base do carro
+      if (mNameLower.includes(baseModel)) {
+        score += 10;
+      }
+      
+      searchTerms.forEach(term => {
+        if (mNameLower.includes(term) && term !== baseModel) score += 2;
+        // Partial match pra ajudar com MT, LT, etc
+        else if (term.length > 2 && mNameLower.includes(term.substring(0, 3))) score += 1;
+      });
+      
+      return { model: m, score };
+    });
+
+    const possibleModels = scoredModels
+      .filter(m => m.score > 10) // Exige pelo menos o nome base (10) e algo mais
+      .sort((a, b) => b.score - a.score)
+      .map(m => m.model);
 
     if (possibleModels.length === 0) {
       console.log(`[FIPE Oficial] Nenhum modelo encontrado para termos: ${searchTerms.join(', ')}`);
