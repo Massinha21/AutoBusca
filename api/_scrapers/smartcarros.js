@@ -4,6 +4,9 @@ const NAME     = "Smart Carros";
 const BASE_URL = "https://smartcarrosribeirao.com.br";
 
 async function search(query, fetchHtml) {
+  const queryWords = query.toLowerCase().split(/\s+/);
+  const results = [];
+
   const MAX_PAGES = 5;
   let page = 1;
   let hasNext = true;
