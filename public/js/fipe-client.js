@@ -102,9 +102,11 @@ class FipeClient {
   async enrichCarUI(car, cardElement) {
     if (car.fipe_price_str) return; // Ja tem fipe (Facebook)
 
-    const release = await new Promise(r => {
-      this.fetchQueue = this.fetchQueue.then(r).catch(r);
-    });
+    let release;
+    const p = new Promise(r => { release = r; });
+    const previousQueue = this.fetchQueue;
+    this.fetchQueue = this.fetchQueue.then(() => p);
+    await previousQueue;
 
     try {
       const brandName = car.title.split(' ')[0];
