@@ -23,8 +23,8 @@ async function search(query) {
     });
 
     const encodedQuery = encodeURIComponent(query);
-    // Usando a rota /search/ pois a rota /vehicles/ ignora a palavra-chave no Puppeteer
-    const searchUrl = `https://www.facebook.com/marketplace/ribeiraopreto/search/?query=${encodedQuery}&exact=false`;
+    // Usamos a rota /search/ com category_id=vehicles porque a rota /vehicles/ ignora a keyword
+    const searchUrl = `https://www.facebook.com/marketplace/ribeiraopreto/search/?query=${encodedQuery}&category_id=vehicles&exact=false`;
     
     console.log(`[Marketplace] Acessando URL: ${searchUrl}`);
     await page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 30000 });
