@@ -202,7 +202,11 @@ class FipeClient {
         <div style="color: #cbd5e1; display: flex; justify-content: space-between; align-items: center;">
            <span>Tabela FIPE:</span> <strong>${fipePriceStr}</strong>
         </div>
-        <div style="color: #94a3b8; font-size: 0.7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(fipeNome)}">${escapeHtml(fipeNome)}</div>
+        <div style="font-size: 0.75rem; line-height: 1.3; margin-top: 2px;">
+          <a href="https://veiculos.fipe.org.br/" target="_blank" style="color: #60a5fa; text-decoration: none; font-weight: 500;" title="Ir para o site oficial da FIPE">
+            ${escapeHtml(fipeNome)} ↗
+          </a>
+        </div>
         ${badgeHtml}
       </div>
     `;
