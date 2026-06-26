@@ -203,7 +203,7 @@ class FipeClient {
            <span>Tabela FIPE:</span> <strong>${fipePriceStr}</strong>
         </div>
         <div style="font-size: 0.75rem; line-height: 1.3; margin-top: 2px;">
-          <a href="https://veiculos.fipe.org.br/" target="_blank" style="color: #60a5fa; text-decoration: none; font-weight: 500;" title="Ir para o site oficial da FIPE">
+          <a href="https://www.google.com/search?q=Tabela+FIPE+${encodeURIComponent(fipeNome)}" target="_blank" style="color: #60a5fa; text-decoration: none; font-weight: 500;" title="Pesquisar esta versão no Google">
             ${escapeHtml(fipeNome)} ↗
           </a>
         </div>
