@@ -161,12 +161,49 @@ const UI = (() => {
       `;
     }
 
+    let kmPorAnoHtml = "";
+    if (car.year && car.year > 1990 && car.year <= new Date().getFullYear()) {
+      let kmValue = null;
+      if (car.km_value) {
+        kmValue = car.km_value;
+      } else if (car.km && typeof car.km === 'string') {
+        kmValue = parseInt(car.km.replace(/[^\d]/g, ''));
+      } else if (car.km && typeof car.km === 'number') {
+        kmValue = car.km;
+      }
+
+      if (kmValue && kmValue > 0) {
+        const currentYear = new Date().getFullYear();
+        let idade = currentYear - car.year;
+        if (idade <= 0) idade = 1;
+
+        const roundedKm = Math.round(kmValue / 10000) * 10000;
+        const mediaAnual = roundedKm / idade;
+        const roundedMedia = Math.round(mediaAnual / 500) * 500;
+
+        let corBadge = "#ef4444"; // Vermelho
+        let statusKm = "Alto";
+        if (roundedMedia < 13000) {
+           corBadge = "#22c55e"; // Verde
+           statusKm = "Baixo";
+        } else if (roundedMedia < 22000) {
+           corBadge = "#eab308"; // Amarelo
+           statusKm = "Médio";
+        }
+
+        const formattedMedia = roundedMedia.toLocaleString('pt-BR');
+
+        kmPorAnoHtml = `<span class="meta-item" style="background-color: ${corBadge}15; color: ${corBadge}; border: 1px solid ${corBadge}30; font-weight: 600;" title="Média aproximada: ${statusKm} uso por ano."><span class="meta-icon" style="filter: grayscale(1)">📊</span> ${formattedMedia} km/ano</span>`;
+      }
+    }
+
     let metaHtml = "";
     if (car.year || car.km || car.version) {
       metaHtml = `
         <div class="car-meta">
           ${car.year ? `<span class="meta-item" title="Ano do modelo"><span class="meta-icon">📅</span> ${escapeHtml(car.year)}</span>` : ""}
           ${car.km ? `<span class="meta-item" title="Quilometragem"><span class="meta-icon">🛣️</span> ${escapeHtml(car.km)}</span>` : ""}
+          ${kmPorAnoHtml}
           ${car.version ? `<span class="meta-item" title="Versão"><span class="meta-icon">🏷️</span> ${escapeHtml(car.version)}</span>` : ""}
         </div>
       `;
