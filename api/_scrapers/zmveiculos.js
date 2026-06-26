@@ -82,7 +82,6 @@ async function search(query, fetchHtml) {
                  year: extYear,
                  km: extKm
                });
-               itemsFoundOnPage++;
              }
           }
         }

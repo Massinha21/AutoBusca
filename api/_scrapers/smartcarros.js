@@ -67,7 +67,6 @@ async function search(query, fetchHtml) {
         }
 
         results.push({ title, price, image_url, url: link, dealer_name: NAME, year, km });
-        itemsFoundOnPage++;
       } catch (_) {}
     });
 
