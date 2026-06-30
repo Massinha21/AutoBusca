@@ -187,18 +187,34 @@ async function search(query) {
         try {
           await newPage.goto(item.link, { waitUntil: 'domcontentloaded', timeout: 10000 });
           await new Promise(r => setTimeout(r, 1500)); // Aguarda o React renderizar o "Sobre este veículo"
-          const kmDeep = await newPage.evaluate(() => {
+          const deepData = await newPage.evaluate(() => {
             const text = document.body.innerText;
             // Padrão 1: "114.000 km rodados"
             const match = text.match(/([\d\.]+)\s*km\s*rodados/i);
-            if (match) return parseInt(match[1].replace(/[^\d]/g, ''));
+            let km = null;
+            if (match) km = parseInt(match[1].replace(/[^\d]/g, ''));
             // Padrão 2: "Quilometragem: 114.000"
             const match2 = text.match(/Quilometragem:\s*([\d\.]+)/i);
-            if (match2) return parseInt(match2[1].replace(/[^\d]/g, ''));
-            return null;
+            if (!km && match2) km = parseInt(match2[1].replace(/[^\d]/g, ''));
+            
+            const ogDesc = document.querySelector('meta[property="og:description"]');
+            const ogTitle = document.querySelector('meta[property="og:title"]');
+
+            return { 
+               km, 
+               desc: ogDesc ? ogDesc.content : "",
+               title: ogTitle ? ogTitle.content : ""
+            };
           });
-          if (kmDeep) {
-             item.km = kmDeep; // Substitui como padrão absoluto
+          
+          if (deepData.km) {
+             item.km = deepData.km; // Substitui como padrão absoluto
+          }
+          if (deepData.desc) {
+             item.descricao = deepData.desc;
+          }
+          if (deepData.title && !deepData.title.includes("Marketplace")) {
+             item.modelo = deepData.title;
           }
         } catch (e) {
           // Ignora erros de timeout de abas individuais
@@ -221,10 +237,17 @@ async function search(query) {
       const is_salvage = /sinistro|leil[ãa]o|batida|recuperado|remarcado/i.test(cleanDesc);
       
       // Tenta extrair a versão comum do título ou da descrição
-      const versionRegex = /\b(JOY|ACTIV|EFFECT|XEI|GLI|ALTIS|COMFORTLINE|HIGHLINE|TRENDLINE|TRACK|LT|LTZ|PREMIER|RS|SENSE|VISION|EVOLUTION|DIAMOND|PLATINUM|VOLCANO|FREEDOM|ENDURANCE|RANCH|ULTRA|ACTIVE|ALLURE|GRIFFE|LIKE|EX|EXL|EXR|LXR|LX|DX|TOURING|ELX|HLX|TREKKING|WAY|SPORTING|HGT|ADVANCE|PRECISION|DRIVE|LIMITED|LONGITUDE|SPORT|TRAILHAWK|SV|SL|SE|SEL|TITANIUM|XLS|XLT|XLI|SEG|SR|SRV|SRX|TRUCK|UNIQUE|EXCLUSIVE|V-DRIVE)\b/i;
+      const versionRegex = /\b(JOY|ACTIV|EFFECT|XEI|GLI|ALTIS|COMFORT|COMFORTLINE|PREMIUM|HIGHLINE|TRENDLINE|TRACK|LT|LTZ|PREMIER|RS|SENSE|VISION|EVOLUTION|DIAMOND|PLATINUM|VOLCANO|FREEDOM|ENDURANCE|RANCH|ULTRA|ACTIVE|ALLURE|GRIFFE|LIKE|EX|EXL|EXR|LXR|LX|DX|TOURING|ELX|HLX|TREKKING|WAY|SPORTING|HGT|ADVANCE|PRECISION|DRIVE|LIMITED|LONGITUDE|SPORT|TRAILHAWK|SV|SL|SE|SEL|TITANIUM|XLS|XLT|XLI|SEG|SR|SRV|SRX|TRUCK|UNIQUE|EXCLUSIVE|V-DRIVE|COPA|OCEAN|R-SPEC|N LINE)\b/i;
       const fullTextToSearch = ((item.modelo || "") + " " + (item.descricao || "")).toUpperCase();
       const versionMatch = fullTextToSearch.match(versionRegex);
-      const version = versionMatch ? versionMatch[1].toUpperCase() : "";
+      let version = versionMatch ? versionMatch[1].toUpperCase() : "";
+
+      // Tenta extrair a motorização (ex: 1.0, 1.6, 2.0)
+      const motorMatch = fullTextToSearch.match(/\b(1\.[0-9]|2\.[0-9]|3\.[0-9]|4\.[0-9]|V6|V8)\b/i);
+      if (motorMatch && !version.includes(motorMatch[1])) {
+         version += " " + motorMatch[1];
+      }
+      version = version.trim();
 
       if (!item.preco) {
         quality_badge = "suspicious";
