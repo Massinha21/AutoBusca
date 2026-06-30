@@ -213,7 +213,7 @@ async function search(query) {
       const is_salvage = /sinistro|leil[ãa]o|batida|recuperado|remarcado/i.test(cleanDesc);
       
       // Tenta extrair a versão comum do título ou da descrição
-      const versionRegex = /\b(XEI|GLI|ALTIS|COMFORTLINE|HIGHLINE|TRENDLINE|TRACK|LT|LTZ|PREMIER|RS|SENSE|VISION|EVOLUTION|DIAMOND|PLATINUM|VOLCANO|FREEDOM|ENDURANCE|RANCH|ULTRA|ACTIVE|ALLURE|GRIFFE|LIKE|EX|EXL|TOURING|ELX|HLX|TREKKING|WAY|SPORTING|HGT|ADVANCE|PRECISION|DRIVE|LIMITED|LONGITUDE|SPORT|TRAILHAWK|SV|SL|UNIQUE|EXCLUSIVE|V-DRIVE)\b/i;
+      const versionRegex = /\b(JOY|ACTIV|EFFECT|XEI|GLI|ALTIS|COMFORTLINE|HIGHLINE|TRENDLINE|TRACK|LT|LTZ|PREMIER|RS|SENSE|VISION|EVOLUTION|DIAMOND|PLATINUM|VOLCANO|FREEDOM|ENDURANCE|RANCH|ULTRA|ACTIVE|ALLURE|GRIFFE|LIKE|EX|EXL|EXR|LXR|LX|DX|TOURING|ELX|HLX|TREKKING|WAY|SPORTING|HGT|ADVANCE|PRECISION|DRIVE|LIMITED|LONGITUDE|SPORT|TRAILHAWK|SV|SL|SE|SEL|TITANIUM|XLS|XLT|XLI|SEG|SR|SRV|SRX|TRUCK|UNIQUE|EXCLUSIVE|V-DRIVE)\b/i;
       const fullTextToSearch = ((item.modelo || "") + " " + (item.descricao || "")).toUpperCase();
       const versionMatch = fullTextToSearch.match(versionRegex);
       const version = versionMatch ? versionMatch[1].toUpperCase() : "";
