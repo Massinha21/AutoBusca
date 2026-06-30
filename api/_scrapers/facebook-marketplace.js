@@ -41,7 +41,10 @@ async function search(query) {
           let scrollHeight = document.body.scrollHeight;
           window.scrollBy(0, distance);
           totalHeight += distance;
-          if(totalHeight >= scrollHeight - window.innerHeight || totalHeight > 3000){
+          
+          const itemsCount = document.querySelectorAll('a[href*="/marketplace/item/"]').length;
+
+          if(totalHeight >= scrollHeight - window.innerHeight || totalHeight > 15000 || itemsCount >= 50){
             clearInterval(timer);
             resolve();
           }
