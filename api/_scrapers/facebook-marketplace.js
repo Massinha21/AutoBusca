@@ -35,16 +35,24 @@ async function search(query) {
     // Rola um pouco a página para garantir que as imagens e os textos (innerText) sejam renderizados pelo React
     await page.evaluate(async () => {
       await new Promise((resolve) => {
-        let totalHeight = 0;
-        let distance = 300;
+        let itemsCount = 0;
+        let lastScrollHeight = 0;
+        let idleCycles = 0;
         let timer = setInterval(() => {
           let scrollHeight = document.body.scrollHeight;
-          window.scrollBy(0, distance);
-          totalHeight += distance;
+          window.scrollBy(0, 500);
           
-          const itemsCount = document.querySelectorAll('a[href*="/marketplace/item/"]').length;
+          itemsCount = document.querySelectorAll('a[href*="/marketplace/item/"]').length;
 
-          if(totalHeight >= scrollHeight - window.innerHeight || totalHeight > 15000 || itemsCount >= 50){
+          if (scrollHeight === lastScrollHeight) {
+             idleCycles++;
+          } else {
+             idleCycles = 0;
+             lastScrollHeight = scrollHeight;
+          }
+
+          // Se achou 50+ ou se a tela não cresceu por 15 ciclos seguidos (fim real do site)
+          if(itemsCount >= 50 || idleCycles >= 15){
             clearInterval(timer);
             resolve();
           }
