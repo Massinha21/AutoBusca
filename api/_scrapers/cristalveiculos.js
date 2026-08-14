@@ -16,9 +16,14 @@ const results = [];
 
   while (page <= MAX_PAGES && hasNext) {
     let initialLength = results.length;
-    
-  const html = await fetchHtml(`${BASE_URL}/veiculos.php?page=${page}`);
-  const $    = cheerio.load(html);
+    let html;
+    try {
+      html = await fetchHtml(`${BASE_URL}/veiculos.php?page=${page}`);
+    } catch (error) {
+      console.warn(`[Cristal Veículos] Site fora do ar ou domínio expirado.`);
+      break;
+    }
+    const $    = cheerio.load(html);
   
   
 
