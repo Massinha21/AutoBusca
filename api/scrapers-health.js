@@ -27,7 +27,6 @@ const PARSERS = [
   require("./_scrapers/holfautos"),
   // Novas 9 Revendas Adicionadas
   require("./_scrapers/bolsadeveiculo"),
-  require("./_scrapers/cristalveiculos"),
   require("./_scrapers/lexcarmultimarcas"),
   require("./_scrapers/sandiegoveiculos"),
   require("./_scrapers/hiperauto"),
