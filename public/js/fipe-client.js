@@ -68,11 +68,17 @@ class FipeClient {
       const modelos = this.modelsCache[brandId];
       if (!Array.isArray(modelos)) return null;
 
-      const searchTerms = [baseModel];
+      let searchTerms = [baseModel];
+      
+      const modelWords = cleanModelName.split(/\s+/).filter(w => w.length > 0 && w !== baseModel && w !== targetBrand);
+      searchTerms.push(...modelWords);
+
       if (version) {
         const versionWords = version.toLowerCase().replace(/[^a-z0-9\s\.]/g, ' ').split(/\s+/).filter(w => w.length > 0 && w !== baseModel && w !== targetBrand);
         searchTerms.push(...versionWords);
       }
+
+      searchTerms = [...new Set(searchTerms)];
 
       // Se não achou NENHUMA palavra indicando versão, motor, etc, consideramos Inconclusivo
       if (searchTerms.length === 1) {
