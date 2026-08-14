@@ -88,7 +88,8 @@ async function _getFipePrice(brandName, modelName, version, year) {
     };
 
     const cleanModelName = modelName.toLowerCase().replace(/chevrolet|fiat|ford|vw|volkswagen|hyundai|toyota|honda|nissan|jeep|renault/gi, '').trim();
-    const baseModel = cleanModelName.split(' ')[0];
+    const baseModelMatch = cleanModelName.match(/[a-z0-9]+/i);
+    const baseModel = baseModelMatch ? baseModelMatch[0] : "";
     
     // Se o targetBrand for um modelo conhecido (ex: 'onix'), traduz para a marca
     if (modelToBrand[targetBrand]) {

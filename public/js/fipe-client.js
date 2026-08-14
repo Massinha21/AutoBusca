@@ -47,7 +47,8 @@ class FipeClient {
       };
 
       const cleanModelName = modelName.toLowerCase().replace(/chevrolet|fiat|ford|vw|volkswagen|hyundai|toyota|honda|nissan|jeep|renault/gi, '').trim();
-      const baseModel = cleanModelName.split(' ')[0];
+      const baseModelMatch = cleanModelName.match(/[a-z0-9]+/i);
+      const baseModel = baseModelMatch ? baseModelMatch[0] : "";
 
       if (modelToBrand[targetBrand]) targetBrand = modelToBrand[targetBrand];
       if (modelToBrand[baseModel]) targetBrand = modelToBrand[baseModel];
