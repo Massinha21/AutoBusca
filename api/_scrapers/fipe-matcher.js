@@ -126,11 +126,18 @@ async function _getFipePrice(brandName, modelName, version, year) {
     const modelos = modelsCache[brandId];
     
     // Procura o modelo que mais combina com o nome e versão
-    const searchTerms = [baseModel];
+    let searchTerms = [baseModel];
+    
+    // Puxa palavras do próprio título do carro (ex: "ONIX 1.0 MPFI LT 8V...")
+    const modelWords = cleanModelName.split(/\s+/).filter(w => w.length > 0 && w !== baseModel && w !== targetBrand);
+    searchTerms.push(...modelWords);
+
     if (version) {
       const versionWords = version.toLowerCase().replace(/[^a-z0-9\s\.]/g, ' ').split(/\s+/).filter(w => w.length > 0 && w !== baseModel && w !== targetBrand);
       searchTerms.push(...versionWords);
     }
+    
+    searchTerms = [...new Set(searchTerms)];
     
     // Se não achou NENHUMA palavra indicando versão, motor, etc, consideramos Inconclusivo
     if (searchTerms.length === 1) {
